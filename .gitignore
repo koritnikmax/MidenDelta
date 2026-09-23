@@ -7,3 +7,4 @@ dist
 *.tgz
 contracts/lib
 .DS_Store
+MidenDelta/
