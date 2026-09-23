@@ -55,6 +55,24 @@ contract SimulatedStrategy is IStrategy, AccessControl {
     event OrderExecuted(uint256 indexed nonce, uint256 spotEth, uint256 perpShortEth);
     event FundingReinvested(int256 rateWad, uint256 hours_, int256 payment, uint256 notional, uint256 price);
     event PositionAdjusted(uint256 spotEth, uint256 perpShortEth, uint256 hedgeRatioBps, uint256 marginBps);
+    /// @notice Full position snapshot on every state change (for the internal ops dashboard).
+    /// reason: 0 allocate · 1 deallocate · 2 funding · 3 rebalance · 4 mark-to-market
+    event Snapshot(
+        uint256 timestamp,
+        uint8 indexed reason,
+        uint256 ethPrice,
+        uint256 spotEth,
+        uint256 perpShortEth,
+        uint256 totalValue,
+        int256 cumulativeFunding,
+        uint256 hedgeRatioBps,
+        uint256 marginBps
+    );
+
+    function _snapshot(uint8 reason) internal {
+        (uint256 r, uint256 m) = hedgeStats();
+        emit Snapshot(block.timestamp, reason, ethPrice, spotEth, perpShortEth, totalValue(), cumulativeFunding, r, m);
+    }
 
     modifier onlyVault() {
         require(msg.sender == vault, "only vault");
@@ -76,6 +94,7 @@ contract SimulatedStrategy is IStrategy, AccessControl {
     function allocate(uint256 amount) external onlyVault {
         uint256 n = createOrder(amount);
         executeOrder(n);
+        _snapshot(0);
     }
 
     function deallocate(uint256 amount) external onlyVault returns (uint256 sent) {
@@ -87,6 +106,7 @@ contract SimulatedStrategy is IStrategy, AccessControl {
         perpShortEth -= perpShortEth.mulDiv(sent, tv);
         usdc.safeTransfer(vault, sent);
         emit OrderExecuted(++orderNonce, spotEth, perpShortEth);
+        _snapshot(1);
     }
 
     // ------------------------------------------------------------------ position lifecycle
@@ -141,12 +161,14 @@ contract SimulatedStrategy is IStrategy, AccessControl {
         lastFundingAt = block.timestamp;
         fundingEvents += hours_;
         emit FundingReinvested(hourlyRateWad, hours_, payment, notional, ethPrice);
+        _snapshot(2);
         _adjustIfDrifted();
     }
 
     /// @notice Keeper rebalance when the hedge ratio or margin share drifts past the threshold.
     function adjustPosition(uint256 newEthPrice) external onlyRole(KEEPER_ROLE) {
         if (newEthPrice > 0) ethPrice = newEthPrice;
+        _snapshot(4);
         _adjustIfDrifted();
     }
 
@@ -161,6 +183,7 @@ contract SimulatedStrategy is IStrategy, AccessControl {
         perpShortEth = ((tv - tv * spotBps / BPS) * leverage).mulDiv(WAD, ethPrice);
         (ratioBps, marginBps) = hedgeStats();
         emit PositionAdjusted(spotEth, perpShortEth, ratioBps, marginBps);
+        _snapshot(3);
     }
 
     /// @return hedgeRatioBps perp short / spot long (10000 = perfectly delta neutral)

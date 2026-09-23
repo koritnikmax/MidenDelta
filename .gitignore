@@ -8,3 +8,4 @@ dist
 contracts/lib
 .DS_Store
 MidenDelta/
+web/ops-dist

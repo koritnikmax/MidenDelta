@@ -1,10 +1,12 @@
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
+import { useWallet } from "./useWallet";
 import { formatUnits } from "viem";
 import VaultApp from "./VaultApp";
 import Performance from "./Performance";
 import { useVaultState, fmtUsd } from "./useVault";
 import { ADDR, explorer } from "./wagmi";
 
+const NOT_DEPLOYED = /^0x0+$/.test(ADDR.vault);
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 function Logo({ size = 30 }: { size?: number }) {
@@ -25,8 +27,8 @@ function Logo({ size = 30 }: { size?: number }) {
 
 function WalletButton() {
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { connectWallet, isPending, error, clearError } = useWallet();
   if (isConnected && address)
     return (
       <button className="btn ghost" onClick={() => disconnect()} title="Disconnect">
@@ -34,9 +36,16 @@ function WalletButton() {
       </button>
     );
   return (
-    <button className="btn light" onClick={() => connectors[0] && connect({ connector: connectors[0] })}>
-      Connect wallet
-    </button>
+    <div style={{ position: "relative" }}>
+      <button className="btn light" onClick={connectWallet} disabled={isPending}>
+        {isPending ? "Check your wallet…" : "Connect wallet"}
+      </button>
+      {error && (
+        <div className="notice err" style={{ position: "absolute", right: 0, top: 52, width: 300, zIndex: 30 }} onClick={clearError}>
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -99,7 +108,10 @@ function Hero() {
             </div>
             <div className="bar"><i style={{ width: `${Math.max(capPct, 0.6)}%` }} /></div>
           </div>
-          {!vs.ok && !vs.loading && (
+          {NOT_DEPLOYED && (
+            <div className="notice info" style={{ marginTop: 16 }}>Contracts are being deployed to HyperEVM testnet. Minting opens shortly.</div>
+          )}
+          {!NOT_DEPLOYED && !vs.ok && !vs.loading && (
             <div className="notice" style={{ marginTop: 16 }}>Can't reach HyperEVM testnet right now. Showing cached data.</div>
           )}
         </div>

@@ -126,7 +126,7 @@ contract MidenDeltaVault is ERC20, AccessControl, Pausable, ReentrancyGuard {
     event RedeemQueued(uint256 indexed requestId, address indexed owner, uint256 amount);
     event QueueProcessed(uint256 filled, uint256 fillRatioWad, uint256 remaining);
     event Claimed(uint256 indexed requestId, address indexed receiver, uint256 amount);
-    event Rebalanced(uint256 allocated, uint256 deallocated, uint256 idle);
+    event Rebalanced(uint256 timestamp, uint256 allocated, uint256 deallocated, uint256 idle, uint256 totalAssets, uint256 totalQueued);
     event ParamsUpdated();
 
     error BelowMinimum();
@@ -411,7 +411,7 @@ contract MidenDeltaVault is ERC20, AccessControl, Pausable, ReentrancyGuard {
             }
         }
         _processQueue();
-        emit Rebalanced(allocated, deallocated, usdc.balanceOf(address(this)));
+        emit Rebalanced(block.timestamp, allocated, deallocated, usdc.balanceOf(address(this)), totalAssets(), totalQueued);
     }
 
     /// @notice Fill queued redemptions pro-rata from free idle USDC. Permissionless.

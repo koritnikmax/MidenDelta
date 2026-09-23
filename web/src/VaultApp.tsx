@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useAccount, useChainId, useConnect, useSwitchChain, useWriteContract, usePublicClient, useReadContract } from "wagmi";
+import { useAccount, useChainId, useSwitchChain, useWriteContract, usePublicClient, useReadContract } from "wagmi";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
 import { vaultAbi, usdcAbi } from "./abi";
 import { ADDR, hyperEvmTestnet, explorer } from "./wagmi";
+import { useWallet } from "./useWallet";
 import { useVaultState, useUserState, useRequests, fmtUsd } from "./useVault";
 
 type Status = { kind: "info" | "ok" | "err"; msg: string; hash?: string } | null;
@@ -15,7 +16,7 @@ export default function VaultApp() {
 
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { connect, connectors } = useConnect();
+  const { connectWallet, isPending: connecting, error: walletError } = useWallet();
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const pc = usePublicClient();
@@ -108,9 +109,12 @@ export default function VaultApp() {
   const actionBtn = () => {
     if (!isConnected)
       return (
-        <button className="btn block" onClick={() => connect({ connector: connectors[0] })} disabled={!connectors.length}>
-          {connectors.length ? "Connect wallet" : "Install MetaMask to continue"}
-        </button>
+        <>
+          <button className="btn block" onClick={connectWallet} disabled={connecting}>
+            {connecting ? "Check your wallet…" : "Connect wallet"}
+          </button>
+          {walletError && <div className="notice err">{walletError}</div>}
+        </>
       );
     if (wrongChain)
       return (
@@ -118,6 +122,8 @@ export default function VaultApp() {
           Switch to HyperEVM Testnet
         </button>
       );
+    if (/^0x0+$/.test(ADDR.vault))
+      return <div className="notice info">Contracts are being deployed to HyperEVM testnet. Minting opens shortly.</div>;
     if (tab === "mint")
       return (
         <button className="btn block" disabled={busy || parsed === 0n || belowMin || tooMuchUsdc} onClick={mint}>

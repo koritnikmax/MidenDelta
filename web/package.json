@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ops": "vite --config vite.ops.config.ts --open /ops.html",
+    "build:ops": "vite build --config vite.ops.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
