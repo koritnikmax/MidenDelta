@@ -1,0 +1,19 @@
+{
+  "name": "midendelta-keeper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "big-blocks": "tsx src/bigBlocks.ts",
+    "keeper": "tsx src/keeper.ts",
+    "once": "tsx src/keeper.ts --once",
+    "status": "tsx src/status.ts",
+    "e2e": "tsx src/e2e.ts",
+    "deploy": "tsx src/deploy.ts"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.0.0",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.0",
+    "viem": "^2.21.0"
+  }
+}
