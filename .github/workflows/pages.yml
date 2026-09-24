@@ -22,9 +22,16 @@ jobs:
         working-directory: web
       - run: npx vite build
         working-directory: web
+      # Marketing site at the root, testnet demo app under /demo/
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -R site/index.html site/investors.html site/team.html site/performance.html site/assets _site/
+          mkdir -p _site/demo
+          cp -R web/dist/. _site/demo/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web/dist
+          path: _site
   deploy:
     needs: build
     runs-on: ubuntu-latest

@@ -141,7 +141,7 @@ export default function VaultApp() {
     <section id="app">
       <div className="wrap">
         <div className="sec-head">
-          <div className="eyebrow dark">Vault · HyperEVM testnet</div>
+          <div className="eyebrow dark">HyperEVM testnet vault</div>
           <h2>Mint and redeem MDELTA</h2>
           <p>
             Deposit USDC to mint MidenDelta vault tokens at the live NAV. Burn them to get USDC back. Redemptions are paid in the same block
@@ -179,7 +179,7 @@ export default function VaultApp() {
                     <span>Series (ERC-8113)</span>
                     <b>{previewSeries === undefined ? "–" : willLandOutstanding ? <span className="chip amber">Series #{String(previewSeries)} · locked until new high</span> : <span className="chip green">Lead · tradable MDELTA</span>}</b>
                   </div>
-                  <div className="row"><span>Fees</span><b>0% entry · 0% management · 19.5% performance</b></div>
+                  <div className="row"><span>Fees</span><b>0% entry, 0% management, 19.5% performance</b></div>
                   {belowMin && <div className="notice">Minimum investment is {fmtUsd(vs.minDeposit, 0)} USDC.</div>}
                   {willLandOutstanding && (
                     <div className="notice info">
@@ -202,7 +202,7 @@ export default function VaultApp() {
             </div>
 
             <div style={{ marginTop: 18 }}>{actionBtn()}</div>
-            {isConnected && !wrongChain && (
+            {isConnected && !wrongChain && !/^0x0+$/.test(ADDR.vault) && (
               <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                 <button className="btn soft" onClick={faucet} disabled={busy}>Get 10,000 test USDC</button>
                 {tab === "redeem" && (us.totalValue ?? 0n) > 0n && (

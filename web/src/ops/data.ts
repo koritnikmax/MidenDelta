@@ -4,8 +4,28 @@ import { vaultAbi, strategyAbi, usdcAbi } from "../abi";
 import deployments from "../deployments.json";
 
 export const client = createPublicClient({ chain: hyperEvmTestnet, transport: http(undefined, { batch: true, retryCount: 2 }) });
-export const KEEPER = deployments.deployer as Address;
-const START_BLOCK = BigInt(deployments.block ?? 0);
+/** Live deployment info. Compiled-in first; replaced from GitHub if newer (see resolveDeployments). */
+export const DEP = { ...deployments } as { usdc: string; vault: string; strategy: string; deployer: string; block: number };
+export let KEEPER = DEP.deployer as Address;
+const REMOTE = "https://raw.githubusercontent.com/koritnikmax/MidenDelta/main/web/src/deployments.json";
+export const isDeployed = () => !/^0x0+$/.test(ADDR.vault);
+
+/** Pull the latest contract addresses from the GitHub repo so this file never needs re-downloading. */
+export async function resolveDeployments() {
+  try {
+    const r = await fetch(`${REMOTE}?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d?.vault || /^0x0+$/.test(d.vault)) return;
+    Object.assign(DEP, d);
+    (ADDR as any).vault = d.vault;
+    (ADDR as any).usdc = d.usdc;
+    (ADDR as any).strategy = d.strategy;
+    KEEPER = d.deployer;
+  } catch {
+    /* offline: keep compiled-in addresses */
+  }
+}
 
 const n6 = (x: bigint) => Number(formatUnits(x, 6));
 const n18 = (x: bigint) => Number(formatUnits(x, 18));
@@ -98,12 +118,12 @@ export async function readLive(): Promise<Live> {
 }
 
 // ------------------------------------------------------------------ event history (chunked + cached)
-const CACHE_KEY = `md-ops-logs-v1-${ADDR.strategy}-${ADDR.vault}`;
+const cacheKey = () => `md-ops-logs-v1-${ADDR.strategy}-${ADDR.vault}`;
 type Cache = { to: string; logs: any[] };
 
 function loadCache(): Cache | null {
   try {
-    const c = localStorage.getItem(CACHE_KEY);
+    const c = localStorage.getItem(cacheKey());
     return c ? (JSON.parse(c) as Cache) : null;
   } catch {
     return null;
@@ -111,7 +131,7 @@ function loadCache(): Cache | null {
 }
 function saveCache(c: Cache) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+    localStorage.setItem(cacheKey(), JSON.stringify(c));
   } catch {
     /* storage full / blocked: fine, we just refetch */
   }
@@ -142,7 +162,7 @@ async function getLogsRange(from: bigint, to: bigint, onProgress?: (p: number) =
 export async function loadHistory(onProgress?: (p: number) => void): Promise<{ snaps: Snap[]; vaultEvents: VaultEvt[] }> {
   const latest = await client.getBlockNumber();
   const cache = loadCache();
-  const from = cache ? BigInt(cache.to) + 1n : START_BLOCK;
+  const from = cache ? BigInt(cache.to) + 1n : BigInt(DEP.block ?? 0);
   const fresh = from <= latest ? await getLogsRange(from, latest, onProgress) : [];
   const raw = [...(cache?.logs.map(deser) ?? []), ...fresh.map(ser).map(deser)];
   saveCache({ to: latest.toString(), logs: raw.map(ser) });

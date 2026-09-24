@@ -9,3 +9,7 @@ contracts/lib
 .DS_Store
 MidenDelta/
 web/ops-dist
+MidenDelta-Ops.html
+
+# local copy of the demo for previewing the marketing site (CI builds the real one)
+site/demo/
