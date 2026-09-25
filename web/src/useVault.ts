@@ -2,6 +2,13 @@ import { useAccount, useReadContracts } from "wagmi";
 import { formatUnits, zeroAddress } from "viem";
 import { vaultAbi, usdcAbi, adapterAbi, strategyAbi, oracleAbi, tokenAbi, registryAbi } from "./abi";
 import { ADDR, ETH_MARKET } from "./wagmi";
+import deployments from "./deployments.json";
+
+/** Demo time-lapse set in the deployments file: hours of funding the keeper credits per cycle (0 = real time). */
+/** Test USDC the deployer subscribed as an anchor investor at launch (shown so visitors don't read it as real money). */
+export const ANCHOR_USDC: number = (deployments as any).anchorUsdc ?? 0;
+
+export const TIMELAPSE = { hours: (deployments as any).timelapseHoursPerCycle ?? 0, cycleSeconds: (deployments as any).keeperCycleSeconds ?? 300 };
 
 const v = { address: ADDR.vault, abi: vaultAbi } as const;
 const u = { address: ADDR.usdc, abi: usdcAbi } as const;

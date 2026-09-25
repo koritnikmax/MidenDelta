@@ -2,7 +2,7 @@ import { useAccount, useDisconnect } from "wagmi";
 import { useWallet } from "./useWallet";
 import { formatUnits } from "viem";
 import VaultApp from "./VaultApp";
-import { useFundState, fmtUsd } from "./useVault";
+import { useFundState, fmtUsd, TIMELAPSE, ANCHOR_USDC } from "./useVault";
 import { ADDR } from "./wagmi";
 
 const NOT_DEPLOYED = /^0x0+$/.test(ADDR.vault);
@@ -108,6 +108,19 @@ function Hero() {
           {NOT_DEPLOYED && <div className="notice info" style={{ marginTop: 16 }}>The fund contracts are being deployed to HyperEVM testnet. Dealing opens shortly.</div>}
           {!NOT_DEPLOYED && !f.ok && !f.loading && <div className="notice" style={{ marginTop: 16 }}>Can't reach HyperEVM testnet right now.</div>}
           <p className="hint" style={{ marginBottom: 0 }}>Figures are indicative. The official NAV is struck by the fund administrator for each dealing epoch.</p>
+          {ANCHOR_USDC > 0 && (
+            <div className="notice" style={{ marginTop: 14 }}>
+              All amounts are test money. Fund assets include {ANCHOR_USDC.toLocaleString("en-US")} test USDC that MidenDelta subscribed as an
+              anchor, so the redemption gate doesn't block individual testers.
+            </div>
+          )}
+          {TIMELAPSE.hours > 0 && (
+            <div className="notice" style={{ marginTop: 14 }}>
+              Demo time-lapse is on: every {Math.round(TIMELAPSE.cycleSeconds / 60)} minutes the keeper credits {TIMELAPSE.hours} hours of
+              funding at the real 7-day average Hyperliquid rate. The NAV grows much faster here than it would in reality; this is not
+              performance.
+            </div>
+          )}
         </div>
       </div>
     </header>

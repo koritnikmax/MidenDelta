@@ -13,5 +13,8 @@
   "timelock": "0x0c87E8f01c4eB88C588871cefEDCfBcC1525dDBE",
   "deployer": "0x53C2a239A27FAc971457f296be7bB3365D8C7D93",
   "block": 65238604,
-  "epochSeconds": 900
+  "epochSeconds": 900,
+  "timelapseHoursPerCycle": 24,
+  "keeperCycleSeconds": 300,
+  "anchorUsdc": 1000000
 }

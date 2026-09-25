@@ -9,9 +9,14 @@
  *   3. dealing: close the epoch at its cutoff; publish the NAV (testnet stand-in for the fund administrator);
  *      recall liquidity for redemptions; settle; deploy free cash into the strategy
  *
+ * Demo time-lapse (testnet only): with timelapseHoursPerCycle > 0 in the deployments file (or --timelapse <hours>),
+ * each cycle credits that many hours of funding at the real 7-day average Hyperliquid ETH rate instead of the
+ * hours that actually passed, so the NAV visibly grows during a demo. The demo labels this; it is not performance.
+ *
  * Flags:
- *   --once              run a single cycle and exit
- *   --interval <sec>    loop interval (default 300)
+ *   --once                run a single cycle and exit
+ *   --interval <sec>      loop interval (default: keeperCycleSeconds from the deployments file, else 300)
+ *   --timelapse <hours>   override the time-lapse hours per cycle (0 = real time)
  */
 import { parseUnits, formatUnits, type Hex } from "viem";
 import { publicClient, walletClient, account, deployments, HL_MAINNET_INFO, FALLBACK_HOURLY_RATE } from "./config.js";
@@ -24,10 +29,10 @@ const flag = (k: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const ONCE = args.includes("--once");
-const INTERVAL = Number(flag("--interval") ?? 300);
-
 if (!deployments) throw new Error("No deployments file: deploy the contracts first (npm run deploy)");
 const D = deployments;
+const INTERVAL = Number(flag("--interval") ?? D.keeperCycleSeconds ?? 300);
+const TIMELAPSE = Number(flag("--timelapse") ?? D.timelapseHoursPerCycle ?? 0);
 const WAD = 10n ** 18n;
 
 const read = <T>(address: Hex, abi: any, functionName: string, fnArgs: unknown[] = []) =>
@@ -69,10 +74,27 @@ async function realisedFunding(sinceSec: number): Promise<[number, number]> {
   }
 }
 
+/** Mean hourly ETH funding over the last 7 days (the time-lapse rate). */
+async function weeklyAverageRate(): Promise<number> {
+  try {
+    const hist = await hlInfo<{ fundingRate: string }[]>({ type: "fundingHistory", coin: "ETH", startTime: Date.now() - 7 * 86_400_000 });
+    if (hist.length) return hist.reduce((a, h) => a + Number(h.fundingRate), 0) / hist.length;
+  } catch {
+    /* fall through */
+  }
+  return FALLBACK_HOURLY_RATE;
+}
+
 async function strategyStep() {
-  const last = Number(await read<bigint>(D.adapter, adapterAbi, "lastFundingAt"));
-  const since = last > 0 ? last : Math.floor(Date.now() / 1000) - 3600;
-  const [rate, hours] = await realisedFunding(since);
+  let rate: number, hours: number;
+  if (TIMELAPSE > 0) {
+    [rate, hours] = [await weeklyAverageRate(), TIMELAPSE];
+    console.log(`  time-lapse: crediting ${hours}h at the 7-day average rate`);
+  } else {
+    const last = Number(await read<bigint>(D.adapter, adapterAbi, "lastFundingAt"));
+    const since = last > 0 ? last : Math.floor(Date.now() / 1000) - 3600;
+    [rate, hours] = await realisedFunding(since);
+  }
   const price = await ethPrice();
   console.log(`  funding ${(rate * 100).toFixed(5)}%/h × ${hours}h, ETH ${price ? formatUnits(price, 6) : "n/a"}`);
   if (hours > 0) await send(D.adapter, adapterAbi, "accrueFunding", [parseUnits(rate.toFixed(18), 18), BigInt(hours), price]);

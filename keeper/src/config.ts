@@ -31,6 +31,9 @@ export type Deployments = {
   chainId: number;
   usdc: Hex; registry: Hex; token: Hex; oracle: Hex; liquidity: Hex; strategy: Hex; adapter: Hex;
   vault: Hex; compliance: Hex; onboarding: Hex; timelock: Hex; deployer: Hex; block: number; epochSeconds: number;
+  /** demo time-lapse: hours of funding credited per keeper cycle at the real 7-day average rate (0 = real time) */
+  timelapseHoursPerCycle?: number;
+  keeperCycleSeconds?: number;
 };
 const raw = existsSync(depPath) ? (JSON.parse(readFileSync(depPath, "utf8")) as Deployments) : undefined;
 /** undefined until the fund contracts are deployed */
