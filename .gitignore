@@ -13,3 +13,4 @@ MidenDelta-Ops.html
 
 # local copy of the demo for previewing the marketing site (CI builds the real one)
 site/demo/
+keeper/keeper.log
