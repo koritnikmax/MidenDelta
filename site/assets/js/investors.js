@@ -1,7 +1,9 @@
 import { initChrome } from "./common.js";
 import { CONFIG } from "./config.js";
+import { requirePageGate } from "./gate.js";
 
 initChrome("investors");
+requirePageGate();
 
 const toggle = document.getElementById("seed-toggle");
 const seedForm = document.getElementById("seed-form");

@@ -23,8 +23,16 @@ export const config = createConfig({
 export const ADDR = {
   vault: deployments.vault as Address,
   usdc: deployments.usdc as Address,
+  token: deployments.token as Address,
+  registry: deployments.registry as Address,
+  oracle: deployments.oracle as Address,
   strategy: deployments.strategy as Address,
+  adapter: deployments.adapter as Address,
+  onboarding: deployments.onboarding as Address,
 };
+
+/** bytes32("ETH"): the only market the strategy may trade */
+export const ETH_MARKET = "0x4554480000000000000000000000000000000000000000000000000000000000" as const;
 
 export const explorer = (a: string, kind: "address" | "tx" = "address") => `${hyperEvmTestnet.blockExplorers.default.url}/${kind}/${a}`;
 

@@ -1,21 +1,22 @@
 /**
- * MidenDelta keeper bot (Milestone 1: simulated strategy)
+ * MidenDelta keeper (testnet, simulated Hyperliquid adapter)
  *
+ * Execution-only: it cannot withdraw, change parameters, add markets or unpause after a breaker.
  * Every interval:
- *   1. reinvestFunding(): pull the REAL realised hourly ETH funding rates from Hyperliquid mainnet for
- *      every hour since the last update and credit them to the simulated short (compounded).
- *   2. adjustPosition() runs inside reinvestFunding when the hedge drifts past the threshold.
- *   3. vault.rebalance(): accrue NAV + performance fees (ERC-8113 series), keep the 5% buffer,
- *      deploy the rest, pull liquidity for the redemption queue and fill it pro-rata.
+ *   1. feed the real Hyperliquid ETH mark price and realised hourly funding into the simulated adapter
+ *   2. re-hedge if spot/short or leverage drifted past the band; top up margin or trip the breaker if margin
+ *      falls below the floor
+ *   3. dealing: close the epoch at its cutoff; publish the NAV (testnet stand-in for the fund administrator);
+ *      recall liquidity for redemptions; settle; deploy free cash into the strategy
  *
  * Flags:
- *   --once                 run a single cycle and exit
- *   --interval <sec>       loop interval (default 3600)
- *   --demo-hours <n>       time-compression for demos: apply the average of the last n real hours as n hours
+ *   --once              run a single cycle and exit
+ *   --interval <sec>    loop interval (default 300)
  */
-import { parseUnits, formatUnits } from "viem";
+import { parseUnits, formatUnits, type Hex } from "viem";
 import { publicClient, walletClient, account, deployments, HL_MAINNET_INFO, FALLBACK_HOURLY_RATE } from "./config.js";
-import { vaultAbi, strategyAbi } from "./abi.js";
+import { vaultAbi, strategyAbi, adapterAbi, oracleAbi, tokenAbi } from "./abi.js";
+import { eurPerUsd } from "./fx.js";
 
 const args = process.argv.slice(2);
 const flag = (k: string) => {
@@ -23,11 +24,23 @@ const flag = (k: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const ONCE = args.includes("--once");
-const INTERVAL = Number(flag("--interval") ?? 3600);
-const DEMO_HOURS = flag("--demo-hours") ? Number(flag("--demo-hours")) : undefined;
+const INTERVAL = Number(flag("--interval") ?? 300);
 
-if (!deployments) throw new Error("No deployments file — deploy the contracts first");
-const { vault, strategy } = deployments;
+if (!deployments) throw new Error("No deployments file: deploy the contracts first (npm run deploy)");
+const D = deployments;
+const WAD = 10n ** 18n;
+
+const read = <T>(address: Hex, abi: any, functionName: string, fnArgs: unknown[] = []) =>
+  publicClient.readContract({ address, abi, functionName, args: fnArgs }) as Promise<T>;
+
+async function send(address: Hex, abi: any, functionName: string, fnArgs: unknown[] = []) {
+  const { request } = await publicClient.simulateContract({ account, address, abi, functionName, args: fnArgs });
+  const hash = await walletClient.writeContract(request);
+  const rc = await publicClient.waitForTransactionReceipt({ hash });
+  if (rc.status !== "success") throw new Error(`${functionName} reverted (${hash})`);
+  console.log(`  ✓ ${functionName}(${fnArgs.map(String).join(", ")}) ${hash}`);
+  return rc;
+}
 
 async function hlInfo<T>(body: object): Promise<T> {
   const r = await fetch(HL_MAINNET_INFO, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -40,64 +53,107 @@ async function ethPrice(): Promise<bigint> {
     const mids = await hlInfo<Record<string, string>>({ type: "allMids" });
     return parseUnits(Number(mids.ETH).toFixed(6), 6);
   } catch {
-    return 0n; // keep on-chain price
+    return 0n;
   }
 }
 
-/** Returns [average hourly rate, hours] of realised funding since `sinceSec`. */
-async function realisedFunding(sinceSec: number): Promise<[number, number, string]> {
+/** Average realised hourly funding since `sinceSec` and the number of hours. */
+async function realisedFunding(sinceSec: number): Promise<[number, number]> {
   try {
-    if (DEMO_HOURS) {
-      const start = Date.now() - DEMO_HOURS * 3600_000;
-      const hist = await hlInfo<{ fundingRate: string; time: number }[]>({ type: "fundingHistory", coin: "ETH", startTime: start });
-      const avg = hist.reduce((a, h) => a + Number(h.fundingRate), 0) / Math.max(hist.length, 1);
-      return [avg, DEMO_HOURS, `demo: avg of last ${hist.length}h real ETH funding`];
-    }
-    const hist = await hlInfo<{ fundingRate: string; time: number }[]>({
-      type: "fundingHistory",
-      coin: "ETH",
-      startTime: sinceSec * 1000 + 1,
-    });
-    if (hist.length === 0) return [0, 0, "no new funding hours"];
-    const sum = hist.reduce((a, h) => a + Number(h.fundingRate), 0);
-    return [sum / hist.length, Math.min(hist.length, 720), `${hist.length}h real ETH funding`];
-  } catch (e) {
-    const hours = DEMO_HOURS ?? Math.max(1, Math.floor((Date.now() / 1000 - sinceSec) / 3600));
-    if (!DEMO_HOURS && Date.now() / 1000 - sinceSec < 3600) return [0, 0, "HL API unreachable, < 1h elapsed"];
-    return [FALLBACK_HOURLY_RATE, Math.min(hours, 720), `HL API unreachable (${(e as Error).message}) → backtest mean 14.16% APR`];
+    const hist = await hlInfo<{ fundingRate: string }[]>({ type: "fundingHistory", coin: "ETH", startTime: sinceSec * 1000 + 1 });
+    if (!hist.length) return [0, 0];
+    return [hist.reduce((a, h) => a + Number(h.fundingRate), 0) / hist.length, Math.min(hist.length, 720)];
+  } catch {
+    const hours = Math.floor((Date.now() / 1000 - sinceSec) / 3600);
+    return hours > 0 ? [FALLBACK_HOURLY_RATE, Math.min(hours, 720)] : [0, 0];
   }
 }
 
-async function send(address: `0x${string}`, abi: any, functionName: string, fnArgs: unknown[] = []) {
-  const { request } = await publicClient.simulateContract({ account, address, abi, functionName, args: fnArgs });
-  const hash = await walletClient.writeContract(request);
-  const rc = await publicClient.waitForTransactionReceipt({ hash });
-  console.log(`  ✓ ${functionName} ${hash} (gas ${rc.gasUsed})`);
-  return rc;
+async function strategyStep() {
+  const last = Number(await read<bigint>(D.adapter, adapterAbi, "lastFundingAt"));
+  const since = last > 0 ? last : Math.floor(Date.now() / 1000) - 3600;
+  const [rate, hours] = await realisedFunding(since);
+  const price = await ethPrice();
+  console.log(`  funding ${(rate * 100).toFixed(5)}%/h × ${hours}h, ETH ${price ? formatUnits(price, 6) : "n/a"}`);
+  if (hours > 0) await send(D.adapter, adapterAbi, "accrueFunding", [parseUnits(rate.toFixed(18), 18), BigInt(hours), price]);
+  else if (price > 0n) await send(D.adapter, adapterAbi, "markPrice", [price]);
+
+  if ((await read<bigint>(D.adapter, adapterAbi, "totalValue")) === 0n) return;
+  await send(D.strategy, strategyAbi, "rebalanceHedge");
+  if (await read<boolean>(D.strategy, strategyAbi, "marginBelowFloor")) {
+    const idle = (await read<bigint>(D.strategy, strategyAbi, "totalValue")) - (await read<bigint>(D.adapter, adapterAbi, "totalValue"));
+    if (idle > 0n) await send(D.strategy, strategyAbi, "topUpMargin", [idle]);
+    if (await read<boolean>(D.strategy, strategyAbi, "marginBelowFloor")) {
+      await send(D.strategy, strategyAbi, "tripBreaker", ["margin below floor after top-up"]);
+    }
+  }
+}
+
+async function dealingStep() {
+  const [current, openedAt, duration, lastSettled] = await Promise.all([
+    read<bigint>(D.vault, vaultAbi, "currentEpoch"),
+    read<bigint>(D.vault, vaultAbi, "epochOpenedAt"),
+    read<bigint>(D.vault, vaultAbi, "epochDuration"),
+    read<bigint>(D.vault, vaultAbi, "lastSettledEpoch"),
+  ]);
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  let epoch = current;
+  if (lastSettled === current - 1n && now >= openedAt + duration) {
+    await send(D.vault, vaultAbi, "closeEpoch");
+    epoch = current + 1n;
+  }
+  const toSettle = (await read<bigint>(D.vault, vaultAbi, "lastSettledEpoch")) + 1n;
+  if (toSettle >= epoch) return; // nothing closed yet
+
+  // NAV per unit = gross fund assets / units outstanding (testnet stand-in for the administrator's NAV)
+  const published = (await read<{ timestamp: bigint }>(D.oracle, oracleAbi, "navOf", [toSettle])).timestamp > 0n;
+  const navUsd = published
+    ? (await read<{ usd: bigint }>(D.oracle, oracleAbi, "navOf", [toSettle])).usd
+    : await (async () => {
+        const [assets, supply, latest] = await Promise.all([
+          read<bigint>(D.vault, vaultAbi, "totalAssets"),
+          read<bigint>(D.token, tokenAbi, "totalSupply"),
+          read<bigint>(D.oracle, oracleAbi, "navPerUnitUSD"),
+        ]);
+        const nav = supply === 0n ? latest : (assets * WAD) / supply;
+        const eur = BigInt(Math.round(Number(nav) * (await eurPerUsd())));
+        await send(D.oracle, oracleAbi, "publish", [toSettle, nav, eur]);
+        return nav;
+      })();
+
+  // make sure the vault holds enough USDC to pay the redemptions this epoch can fill
+  const [queued, info, freeCash] = await Promise.all([
+    read<bigint>(D.vault, vaultAbi, "queuedShares"),
+    read<readonly bigint[]>(D.vault, vaultAbi, "epochs", [toSettle]),
+    read<bigint>(D.vault, vaultAbi, "freeCash"),
+  ]);
+  const depositAssets = info[0];
+  const redeemValue = ((queued + info[1]) * navUsd) / WAD;
+  const available = freeCash + depositAssets;
+  if (redeemValue > available) await send(D.vault, vaultAbi, "recallFromStrategy", [((redeemValue - available) * 101n) / 100n]);
+  await send(D.vault, vaultAbi, "settleEpoch");
+}
+
+async function deployStep() {
+  const free = await read<bigint>(D.vault, vaultAbi, "freeCash");
+  if (free > 1_000_000n) await send(D.vault, vaultAbi, "deployToStrategy", [free]);
 }
 
 async function cycle() {
-  const t = new Date().toISOString();
-  const last = Number(await publicClient.readContract({ address: strategy, abi: strategyAbi, functionName: "lastFundingAt" }));
-  const since = last > 0 ? last : Math.floor(Date.now() / 1000) - 3600;
-  const [rate, hours, note] = await realisedFunding(since);
-  const price = await ethPrice();
-  console.log(`[${t}] funding: ${(rate * 100).toFixed(5)}%/h × ${hours}h (${note}), ETH ${price ? formatUnits(price, 6) : "n/a"}`);
-
-  if (hours > 0) {
-    const rateWad = parseUnits(rate.toFixed(18), 18);
-    await send(strategy, strategyAbi, "reinvestFunding", [rateWad, BigInt(hours), price]);
-  } else if (price > 0n) {
-    await send(strategy, strategyAbi, "adjustPosition", [price]);
+  console.log(`[${new Date().toISOString()}]`);
+  if (await read<boolean>(D.vault, vaultAbi, "paused")) {
+    console.log("  vault paused: breaker tripped, waiting for the AIFM to resume");
+    return;
   }
-  await send(vault, vaultAbi, "rebalance");
-
-  const [nav, pps, queued] = await Promise.all([
-    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalAssets" }),
-    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "pricePerShare" }),
-    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "totalQueued" }),
+  await strategyStep();
+  await dealingStep();
+  await deployStep();
+  const [assets, epoch, nav] = await Promise.all([
+    read<bigint>(D.vault, vaultAbi, "totalAssets"),
+    read<bigint>(D.vault, vaultAbi, "currentEpoch"),
+    read<bigint>(D.oracle, oracleAbi, "navPerUnitUSD"),
   ]);
-  console.log(`  NAV ${formatUnits(nav as bigint, 6)} USDC · PPS ${formatUnits(pps as bigint, 18)} · queued ${formatUnits(queued as bigint, 6)}`);
+  console.log(`  fund assets ${formatUnits(assets, 6)} USDC, NAV/unit ${formatUnits(nav, 6)}, open epoch ${epoch}`);
 }
 
 do {

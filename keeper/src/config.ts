@@ -15,7 +15,7 @@ export const HL_TESTNET_API = process.env.HL_TESTNET_API ?? "https://api.hyperli
 /** Real (mainnet) funding data drives the simulated NAV. */
 export const HL_MAINNET_INFO = process.env.HL_MAINNET_INFO ?? "https://api.hyperliquid.xyz/info";
 
-/** Backtest fallback: 14.16% gross APR (Hyperliquid ETH, May 2023 – Sep 2026). */
+/** Fallback when the Hyperliquid API is unreachable: the backtest mean hourly funding rate. */
 export const FALLBACK_HOURLY_RATE = 0.1416 / 8760;
 
 const pk = process.env.PRIVATE_KEY as Hex | undefined;
@@ -26,6 +26,13 @@ export const publicClient = createPublicClient({ chain: hyperEvmTestnet, transpo
 export const walletClient = createWalletClient({ account, chain: hyperEvmTestnet, transport: http() });
 
 const depPath = process.env.DEPLOYMENTS ?? new URL("../../contracts/deployments/hyperevm-testnet.json", import.meta.url).pathname;
-export const deployments = existsSync(depPath)
-  ? (JSON.parse(readFileSync(depPath, "utf8")) as { usdc: Hex; vault: Hex; strategy: Hex; deployer: Hex })
-  : undefined;
+
+export type Deployments = {
+  chainId: number;
+  usdc: Hex; registry: Hex; token: Hex; oracle: Hex; liquidity: Hex; strategy: Hex; adapter: Hex;
+  vault: Hex; compliance: Hex; onboarding: Hex; timelock: Hex; deployer: Hex; block: number; epochSeconds: number;
+};
+const raw = existsSync(depPath) ? (JSON.parse(readFileSync(depPath, "utf8")) as Deployments) : undefined;
+/** undefined until the fund contracts are deployed */
+export const deployments = raw && raw.vault && !/^0x0+$/.test(raw.vault) ? raw : undefined;
+export const DEPLOYMENTS_PATH = depPath;

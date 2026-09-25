@@ -1,6 +1,7 @@
 // Shared chrome for every page: header, full-screen menu, footer, smooth scroll, reveal-on-scroll.
 import Lenis from "lenis";
 import { CONFIG } from "./config.js";
+import { guardLinks } from "./gate.js";
 
 export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -46,7 +47,7 @@ function header(page) {
     </nav>
     <aside>
       ${logoSvg("mark-lg", true)}
-      <p>MidenDelta wraps institutional hedge fund strategies in ERC-4626 vault tokens. Vault 01 runs a delta-neutral ETH cash &amp; carry.</p>
+      <p>MidenDelta runs institutional strategies as a regulated fund with on-chain units. Vault 01 is a delta-neutral ETH cash and carry for professional investors.</p>
     </aside>
   </div>`;
 }
@@ -58,7 +59,7 @@ function footer() {
     <div class="footer-grid">
       <div>
         <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
-        <p style="margin-top:14px;max-width:38ch">The next-generation hedge fund: institutional strategies, wrapped as liquid vault tokens.</p>
+        <p style="margin-top:14px;max-width:38ch">The next-gen hedge fund: regulated execution with on-chain units and on-chain execution.</p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><a href="./">How it works</a></li>
@@ -71,7 +72,7 @@ function footer() {
         <li><a href="investors.html#seed">Seed round</a></li>
       </ul></div>
     </div>
-    <p class="disclaimer">© ${y} MidenDelta. Vault 01 currently runs as a testnet prototype on HyperEVM; its smart contracts have not yet been audited. Nothing on this website is an offer to sell, or a solicitation of an offer to buy, any security or token. Any offering will be made only to eligible investors under the applicable offering documents. Digital-asset strategies involve risk, including loss of principal; delta-neutral strategies remain exposed to funding-rate, basis, execution, counterparty and smart-contract risk. Past or simulated performance does not guarantee future results.</p>
+    <p class="disclaimer">© ${y} MidenDelta. MidenDelta Fund is an alternative investment fund in formation in Liechtenstein, to be managed by a licensed AIFM. Fund units are available only to professional and semi-professional investors, and not to US persons. Nothing on this website is an offer to sell, or a solicitation of an offer to buy, fund units; any offering will be made only under the fund's offering documents. Vault 01 currently runs as a testnet prototype on HyperEVM and its smart contracts have not yet been audited. The strategy involves risk, including loss of capital: returns vary and can be negative, and a delta-neutral position remains exposed to funding-rate, basis, execution, venue and smart-contract risk. Past or simulated performance is not a reliable indicator of future results.</p>
   </footer>`;
 }
 
@@ -110,6 +111,9 @@ export function initChrome(page) {
       if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -80 }); }
     });
   }
+
+  // fund details sit behind the eligibility self-declaration
+  guardLinks((u) => u.origin === location.origin && (/(investors|performance)\.html$/.test(u.pathname) || /\/demo\/?/.test(u.pathname)));
 
   const hdr = document.getElementById("site-header");
   const onScroll = () => hdr.classList.toggle("scrolled", scrollY > 24);

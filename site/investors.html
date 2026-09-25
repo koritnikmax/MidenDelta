@@ -19,11 +19,11 @@
     <div class="wrap" style="position:relative">
       <span class="eyebrow reveal">Investor access</span>
       <h1 class="reveal" data-delay="1">Capacity is the constraint.</h1>
-      <p class="reveal" data-delay="2">We are not running a broad raise. Vault 01 is hard-capped at $10M for its proof of concept, and our seed round is allocated mostly through existing relationships. If you'd like to be considered, there are two ways in.</p>
+      <p class="reveal" data-delay="2">We are not running a broad raise. Vault 01 is hard-capped at $10M for its proof of concept and open only to professional and semi-professional investors, and our seed round is allocated mostly through existing relationships. If you'd like to be considered, there are two ways in.</p>
       <div class="status-strip reveal" data-delay="3">
         <span class="status-pill"><span class="dot ok"></span>Vault 01 waitlist open</span>
         <span class="status-pill"><span class="dot"></span>Seed round by introduction</span>
-        <span class="status-pill">$10M proof-of-concept cap</span>
+        <span class="status-pill">Professional investors only</span>
       </div>
     </div>
   </section>
@@ -36,11 +36,11 @@
           <span class="status-pill"><span class="dot ok"></span>Open</span>
         </div>
         <h2>Vault 01 waitlist</h2>
-        <p>Reserve priority access to the ETH cash &amp; carry vault before deposits open. Capacity is capped, and allocations are offered in waitlist order.</p>
+        <p>Reserve priority access to the ETH cash and carry fund before dealing opens. Capacity is capped, and allocations are offered in waitlist order after onboarding with the fund administrator.</p>
         <ul class="perks">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span><strong>0% performance fee for year one</strong> on the first $10M of deposits</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span><strong>0% performance fee in year one</strong> for founding investors in the first $10M, subject to the final fund documents</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Priority allocation before the $10M proof-of-concept cap fills</span></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>USDC in, MDELTA out. $1,000 minimum, redeemable at NAV</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Subscribe in USDC, redeem daily at NAV. Semi-professional minimum €200,000</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Direct line to the founders through launch</span></li>
         </ul>
         <div class="form-wrap">
@@ -53,23 +53,30 @@
               <div class="field"><label for="v-size">Intended allocation</label>
                 <select id="v-size" name="allocation" required>
                   <option value="">Select a range</option>
-                  <option>$1k – $25k</option><option>$25k – $100k</option><option>$100k – $500k</option><option>$500k – $1M</option><option>$1M +</option>
+                  <option>Under €200k (professional investors only)</option><option>€200k – €500k</option><option>€500k – €1M</option><option>€1M – €5M</option><option>€5M +</option>
                 </select><span class="err" role="alert"></span></div>
+              <div class="field"><label for="v-category">Investor category</label>
+                <select id="v-category" name="investorCategory" required>
+                  <option value="">Select one</option>
+                  <option>Professional investor</option><option>Semi-professional investor (€200k or more)</option>
+                </select><span class="err" role="alert"></span></div>
+            </div>
+            <div class="row">
               <div class="field"><label for="v-type">Investor type</label>
                 <select id="v-type" name="investorType" required>
                   <option value="">Select one</option>
                   <option>Individual</option><option>Family office</option><option>Fund / asset manager</option><option>DAO / protocol treasury</option><option>Institution</option>
                 </select><span class="err" role="alert"></span></div>
+              <div class="field"><label for="v-country">Country of residence <span class="hint">(US persons are not eligible)</span></label><input id="v-country" name="country" autocomplete="country-name" required /><span class="err" role="alert"></span></div>
             </div>
-            <div class="field"><label for="v-country">Country of residence</label><input id="v-country" name="country" autocomplete="country-name" required /><span class="err" role="alert"></span></div>
-            <label class="check"><input type="checkbox" name="eligible" required /><span>I confirm I am a professional, qualified or accredited investor where my jurisdiction requires it. I understand this waitlist is not an offer or a commitment to invest.</span></label>
-            <span class="err" data-for="eligible" role="alert" style="font-size:12.5px;color:var(--short)"></span>
+            <label class="check"><input type="checkbox" name="eligible" required /><span>I confirm I am a professional investor, or a semi-professional investor investing at least €200,000, and not a US person. I understand this waitlist is not an offer or a commitment to invest.</span></label>
+            <span class="err" data-for="eligible" role="alert"></span>
             <button class="btn btn-primary submit" type="submit">Request allocation
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           </form>
           <div class="form-success" role="status" tabindex="-1">
             <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>You're on the list.</h3>
-            <p>We'll reach out in waitlist order before deposits open. Meanwhile, you can try the vault on testnet.</p>
+            <p>We'll reach out in waitlist order to start onboarding with the fund administrator. Meanwhile, you can try the dealing flow on testnet.</p>
           </div>
         </div>
       </article>
@@ -116,15 +123,38 @@
     </div>
   </section>
 
+  <section class="section" style="padding-top:0" id="terms">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Vault 01 terms</span>
+        <h2>Fund terms at a glance.</h2>
+        <p>Indicative terms of the founding share class. Final terms are set in the fund's offering documents.</p>
+      </div>
+      <dl class="terms reveal" data-delay="1">
+        <div class="term"><dt>Strategy</dt><dd>ETH cash and carry<small>Long spot ETH, short an equal ETH perpetual. Net delta close to 0.</small></dd></div>
+        <div class="term"><dt>Fund units</dt><dd>MDELTA<small>ERC-3643 permissioned units, issued and redeemed through an ERC-7540 vault</small></dd></div>
+        <div class="term"><dt>Dealing</dt><dd>Daily<small>Subscriptions and redemptions settle each business day at the administrator's NAV</small></dd></div>
+        <div class="term"><dt>Venue</dt><dd>Hyperliquid<small>Spot and perp on one venue today; more venues later</small></dd></div>
+        <div class="term"><dt>Perp leverage</dt><dd>Capped at 3×<small>The keeper may run lower, never higher</small></dd></div>
+        <div class="term"><dt>Fees</dt><dd>19.5% performance fee<small>Above the high-water mark, plus fund costs (administration, depositary, audit). No management fee.</small></dd></div>
+        <div class="term"><dt>Investors</dt><dd>Professional<small>Professional and semi-professional (min. €200,000). No US persons.</small></dd></div>
+        <div class="term highlight"><dt>Founding investors</dt><dd>0% performance fee<small>In year one, for founding investors within the $10M proof-of-concept cap</small></dd></div>
+      </dl>
+    </div>
+  </section>
+
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div class="section-head reveal"><span class="eyebrow">Diligence</span><h2>Questions allocators ask.</h2></div>
       <div class="faq reveal">
-        <details><summary>What exactly do I hold?</summary><p>MDELTA, an ERC-20 share token of an ERC-4626 vault. Each share is a pro-rata claim on the vault's net asset value. It is minted when you deposit USDC and burned when you redeem.</p></details>
-        <details><summary>Where does the return come from?</summary><p>Mainly from perpetual-futures funding. When the market is net long, longs pay shorts, and the vault holds the short leg. Spot ETH offsets the price exposure, so the position is delta-neutral. Funding rates vary and can turn negative, and that is the main source of return variance.</p></details>
-        <details><summary>What if many holders redeem at once?</summary><p>About 5% of NAV is held idle in USDC for instant redemptions. Larger exits are queued and filled pro-rata. A dynamic exit fee applies only to net outflows, and it stays in the vault for the holders who remain.</p></details>
-        <details><summary>How are fees charged?</summary><p>There is no management fee. A 19.5% performance fee applies only to gains above each deposit's own high-water mark (ERC-8113). The first $10M of deposits pay no performance fee during year one.</p></details>
-        <details><summary>Is it audited?</summary><p>Not yet. Vault 01 runs today as a testnet prototype. Before mainnet we will complete formal verification, a tier-1 audit, multisig and timelock controls on admin roles, and a full legal review.</p></details>
+        <details><summary>Who can invest?</summary><p>Professional investors, and semi-professional investors who invest at least €200,000 and meet the other statutory conditions. US persons and residents of sanctioned countries are excluded. Every investor is onboarded and KYC-checked by the fund administrator before their wallet can hold units.</p></details>
+        <details><summary>What exactly do I hold?</summary><p>MDELTA fund units: ERC-3643 permissioned tokens that form the fund's unit register on-chain. They are issued when a subscription settles and burned when a redemption settles, always at the administrator's NAV. Units can only be held by verified, eligible wallets.</p></details>
+        <details><summary>How does dealing work?</summary><p>You request a subscription in USDC or a redemption in units at any time. At the daily cutoff the dealing period closes, the administrator strikes the NAV, and requests settle at that NAV. You then claim your units or USDC. There is no instant mint or redeem.</p></details>
+        <details><summary>Where does the return come from?</summary><p>Mainly from perpetual-futures funding. When the market is net long, longs pay shorts, and the fund holds the short leg. Spot ETH offsets the price exposure. Funding rates vary and can turn negative, which is the main source of return variance. Returns can be negative.</p></details>
+        <details><summary>What if many investors redeem at once?</summary><p>If net redemptions on a dealing day exceed 15% of NAV, every request is filled by the same percentage and the rest rolls to the next dealing day with no priority. Net outflows pay an anti-dilution levy that stays in the fund for the remaining investors.</p></details>
+        <details><summary>How are fees charged?</summary><p>There is no management fee. A 19.5% performance fee applies only to gains above the high-water mark, calculated by the fund administrator. Fund costs such as administration, depositary and audit are charged to the fund. Founding investors in the first $10M pay no performance fee in year one, subject to the final fund documents.</p></details>
+        <details><summary>Who controls the fund?</summary><p>The strategy runs on-chain and is supervised by a licensed Liechtenstein AIFM. The AIFM sets the limits the strategy runs within, owns risk management and valuation oversight, holds the admin keys through a multisig and timelock, and decides when to resume after a circuit breaker. A depositary oversees the assets. MidenDelta builds and operates the strategy under the AIFM's mandate; its execution keeper cannot withdraw assets or change limits. Over time, MidenDelta plans to obtain its own AIFM licence in Liechtenstein and manage the funds directly.</p></details>
+        <details><summary>Is it audited?</summary><p>Not yet. Vault 01 runs today as a testnet prototype. Before mainnet we will complete formal verification, a tier-1 audit and a full legal review with the fund manager.</p></details>
       </div>
     </div>
   </section>

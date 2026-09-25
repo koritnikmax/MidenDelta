@@ -1,11 +1,11 @@
 import { createPublicClient, http, formatUnits, type Address, type Log } from "viem";
-import { hyperEvmTestnet, ADDR } from "../wagmi";
-import { vaultAbi, strategyAbi, usdcAbi } from "../abi";
+import { hyperEvmTestnet, ADDR, ETH_MARKET } from "../wagmi";
+import { vaultAbi, strategyAbi, adapterAbi, oracleAbi, tokenAbi } from "../abi";
 import deployments from "../deployments.json";
 
 export const client = createPublicClient({ chain: hyperEvmTestnet, transport: http(undefined, { batch: true, retryCount: 2 }) });
 /** Live deployment info. Compiled-in first; replaced from GitHub if newer (see resolveDeployments). */
-export const DEP = { ...deployments } as { usdc: string; vault: string; strategy: string; deployer: string; block: number };
+export const DEP = { ...deployments } as Record<string, any> & { vault: string; deployer: string; block: number };
 export let KEEPER = DEP.deployer as Address;
 const REMOTE = "https://raw.githubusercontent.com/koritnikmax/MidenDelta/main/web/src/deployments.json";
 export const isDeployed = () => !/^0x0+$/.test(ADDR.vault);
@@ -18,9 +18,7 @@ export async function resolveDeployments() {
     const d = await r.json();
     if (!d?.vault || /^0x0+$/.test(d.vault)) return;
     Object.assign(DEP, d);
-    (ADDR as any).vault = d.vault;
-    (ADDR as any).usdc = d.usdc;
-    (ADDR as any).strategy = d.strategy;
+    for (const k of Object.keys(ADDR)) if (d[k]) (ADDR as any)[k] = d[k];
     KEEPER = d.deployer;
   } catch {
     /* offline: keep compiled-in addresses */
@@ -30,7 +28,7 @@ export async function resolveDeployments() {
 const n6 = (x: bigint) => Number(formatUnits(x, 6));
 const n18 = (x: bigint) => Number(formatUnits(x, 18));
 
-export const REASONS = ["Allocate", "Deallocate", "Funding", "Rebalance", "Mark-to-market"] as const;
+export const REASONS = ["Open", "Unwind", "Funding", "Rebalance", "Mark", "Margin top-up"] as const;
 
 export type Snap = {
   block: number;
@@ -43,7 +41,7 @@ export type Snap = {
   tv: number; // strategy value USDC
   cumFunding: number;
   hedgeBps: number;
-  marginBps: number;
+  marginBps: number; // margin equity / short notional
   // derived
   longUsd: number;
   shortUsd: number;
@@ -56,69 +54,51 @@ export type Snap = {
 export type VaultEvt = { block: number; tx: string; t?: number; kind: string; text: string; amount?: number };
 
 export type Live = {
-  price: number; spotEth: number; shortEth: number; tv: number; cumFunding: number; lastRate: number; lastFundingAt: number;
-  hedgeBps: number; marginBps: number; leverage: number; spotBps: number; driftBps: number; fundingHours: number;
-  nav: number; pps: number; hwm: number; idle: number; queued: number; reserved: number; bufferBps: number;
-  perfFees: number; exitFees: number; supply: number; outstanding: bigint[]; perfFeeBps: number;
+  // venue (simulated Hyperliquid adapter)
+  price: number; spotEth: number; shortEth: number; venueValue: number; cumFunding: number; lastRate: number; lastFundingAt: number;
+  hedgeBps: number; marginRatioBps: number; leverageBps: number; fundingHours: number;
+  // strategy manager limits
+  strategyValue: number; targetLeverageBps: number; maxLeverageBps: number; bandBps: number; minMarginBps: number; bufferBps: number;
+  strategyPaused: boolean;
+  // vault and dealing
+  fundAssets: number; freeCash: number; pendingDeposits: number; reserved: number; queuedUnits: number; levies: number;
+  epoch: number; lastSettled: number; epochOpenedAt: number; epochDuration: number; vaultPaused: boolean;
+  // official NAV and units
+  navUsd: number; navEur: number; navEpoch: number; supply: number;
   keeperHype: number; block: number; blockTime: number;
 };
 
 export async function readLive(): Promise<Live> {
+  const a = { address: ADDR.adapter, abi: adapterAbi } as const;
   const s = { address: ADDR.strategy, abi: strategyAbi } as const;
   const v = { address: ADDR.vault, abi: vaultAbi } as const;
-  const r = await client.multicall({
-    allowFailure: false,
-    contracts: [
-      { ...s, functionName: "ethPrice" },
-      { ...s, functionName: "spotEth" },
-      { ...s, functionName: "perpShortEth" },
-      { ...s, functionName: "totalValue" },
-      { ...s, functionName: "cumulativeFunding" },
-      { ...s, functionName: "lastFundingRate" },
-      { ...s, functionName: "lastFundingAt" },
-      { ...s, functionName: "hedgeStats" },
-      { ...s, functionName: "leverage" },
-      { ...s, functionName: "spotBps" },
-      { ...s, functionName: "driftThresholdBps" },
-      { ...s, functionName: "fundingEvents" },
-      { ...v, functionName: "totalAssets" },
-      { ...v, functionName: "pricePerShare" },
-      { ...v, functionName: "seriesInfo", args: [0n] },
-      { address: ADDR.usdc, abi: usdcAbi, functionName: "balanceOf", args: [ADDR.vault] },
-      { ...v, functionName: "totalQueued" },
-      { ...v, functionName: "reservedClaimable" },
-      { ...v, functionName: "bufferBps" },
-      { ...v, functionName: "totalFeesCollected" },
-      { ...v, functionName: "totalExitFees" },
-      { ...v, functionName: "totalSupply" },
-      { ...v, functionName: "outstandingSeries" },
-      { ...v, functionName: "performanceFeeBps" },
-    ] as any,
-  }).catch(async () => {
-    // RPC without multicall3: fall back to individual calls
-    const calls: any[] = [
-      [s, "ethPrice"], [s, "spotEth"], [s, "perpShortEth"], [s, "totalValue"], [s, "cumulativeFunding"], [s, "lastFundingRate"],
-      [s, "lastFundingAt"], [s, "hedgeStats"], [s, "leverage"], [s, "spotBps"], [s, "driftThresholdBps"], [s, "fundingEvents"],
-      [v, "totalAssets"], [v, "pricePerShare"], [v, "seriesInfo", [0n]], [{ address: ADDR.usdc, abi: usdcAbi }, "balanceOf", [ADDR.vault]],
-      [v, "totalQueued"], [v, "reservedClaimable"], [v, "bufferBps"], [v, "totalFeesCollected"], [v, "totalExitFees"], [v, "totalSupply"],
-      [v, "outstandingSeries"], [v, "performanceFeeBps"],
-    ];
-    return Promise.all(calls.map(([c, fn, args]) => client.readContract({ ...c, functionName: fn, args } as any)));
-  });
+  const o = { address: ADDR.oracle, abi: oracleAbi } as const;
+  const calls: [any, string, unknown[]?][] = [
+    [a, "ethPrice"], [a, "spotEth"], [a, "perpShortEth"], [a, "totalValue"], [a, "cumulativeFunding"], [a, "lastFundingRate"],
+    [a, "lastFundingAt"], [a, "hedgeStats"], [a, "getLeverage", [ETH_MARKET]], [a, "fundingHours"],
+    [s, "totalValue"], [s, "targetLeverageBps"], [s, "maxPerpLeverageBps"], [s, "hedgeBandBps"], [s, "minMarginRatioBps"], [s, "liquidityBufferBps"], [s, "paused"],
+    [v, "totalAssets"], [v, "freeCash"], [v, "pendingDepositAssets"], [v, "reservedAssets"], [v, "queuedShares"], [v, "totalLevies"],
+    [v, "currentEpoch"], [v, "lastSettledEpoch"], [v, "epochOpenedAt"], [v, "epochDuration"], [v, "paused"],
+    [o, "navPerUnitUSD"], [o, "navPerUnitEUR"], [o, "latestEpoch"], [{ address: ADDR.token, abi: tokenAbi }, "totalSupply"],
+  ];
+  const x = (await Promise.all(calls.map(([c, fn, args]) => client.readContract({ ...c, functionName: fn, args } as any)))) as any[];
   const [bal, blk] = await Promise.all([client.getBalance({ address: KEEPER }), client.getBlock()]);
-  const x = r as any[];
+  const lev = x[8] as bigint;
   return {
-    price: n6(x[0]), spotEth: n18(x[1]), shortEth: n18(x[2]), tv: n6(x[3]), cumFunding: n6(x[4]),
-    lastRate: n18(x[5]), lastFundingAt: Number(x[6]), hedgeBps: Number(x[7][0]), marginBps: Number(x[7][1]),
-    leverage: Number(x[8]), spotBps: Number(x[9]), driftBps: Number(x[10]), fundingHours: Number(x[11]),
-    nav: n6(x[12]), pps: n18(x[13]), hwm: n18(x[14][3]), idle: n6(x[15]), queued: n6(x[16]), reserved: n6(x[17]),
-    bufferBps: Number(x[18]), perfFees: n6(x[19]), exitFees: n6(x[20]), supply: n18(x[21]), outstanding: x[22], perfFeeBps: Number(x[23]),
+    price: n6(x[0]), spotEth: n18(x[1]), shortEth: n18(x[2]), venueValue: n6(x[3]), cumFunding: n6(x[4]), lastRate: n18(x[5]),
+    lastFundingAt: Number(x[6]), hedgeBps: Number(x[7][0]), marginRatioBps: Number(x[7][1]),
+    leverageBps: lev > 10n ** 12n ? Infinity : Number(lev), fundingHours: Number(x[9]),
+    strategyValue: n6(x[10]), targetLeverageBps: Number(x[11]), maxLeverageBps: Number(x[12]), bandBps: Number(x[13]), minMarginBps: Number(x[14]),
+    bufferBps: Number(x[15]), strategyPaused: x[16],
+    fundAssets: n6(x[17]), freeCash: n6(x[18]), pendingDeposits: n6(x[19]), reserved: n6(x[20]), queuedUnits: n18(x[21]), levies: n6(x[22]),
+    epoch: Number(x[23]), lastSettled: Number(x[24]), epochOpenedAt: Number(x[25]), epochDuration: Number(x[26]), vaultPaused: x[27],
+    navUsd: n6(x[28]), navEur: n6(x[29]), navEpoch: Number(x[30]), supply: n18(x[31]),
     keeperHype: n18(bal), block: Number(blk.number), blockTime: Number(blk.timestamp),
   };
 }
 
 // ------------------------------------------------------------------ event history (chunked + cached)
-const cacheKey = () => `md-ops-logs-v1-${ADDR.strategy}-${ADDR.vault}`;
+const cacheKey = () => `md-ops-logs-v2-${ADDR.adapter}-${ADDR.vault}`;
 type Cache = { to: string; logs: any[] };
 
 function loadCache(): Cache | null {
@@ -147,7 +127,7 @@ async function getLogsRange(from: bigint, to: bigint, onProgress?: (p: number) =
   while (cur <= to) {
     const end = cur + chunk - 1n > to ? to : cur + chunk - 1n;
     try {
-      const logs = await client.getLogs({ address: [ADDR.strategy, ADDR.vault], fromBlock: cur, toBlock: end });
+      const logs = await client.getLogs({ address: [ADDR.adapter, ADDR.vault, ADDR.strategy], fromBlock: cur, toBlock: end });
       out.push(...logs);
       cur = end + 1n;
       onProgress?.(Number(((cur - from) * 100n) / (to - from + 1n)));
@@ -176,32 +156,37 @@ async function decode(raw: Log[]) {
   for (const l of raw) {
     const addr = l.address.toLowerCase();
     try {
-      if (addr === ADDR.strategy.toLowerCase()) {
-        const d = decodeEventLog({ abi: strategyAbi, data: l.data, topics: l.topics }) as any;
+      if (addr === ADDR.adapter.toLowerCase()) {
+        const d = decodeEventLog({ abi: adapterAbi, data: l.data, topics: l.topics }) as any;
         if (d.eventName !== "Snapshot") continue;
         const a = d.args;
         const price = n6(a.ethPrice), spot = n18(a.spotEth), short = n18(a.perpShortEth), tv = n6(a.totalValue);
         snaps.push({
           block: Number(l.blockNumber), tx: l.transactionHash!, t: Number(a.timestamp), reason: Number(a.reason), price, spotEth: spot, shortEth: short, tv,
-          cumFunding: n6(a.cumulativeFunding), hedgeBps: Number(a.hedgeRatioBps), marginBps: Number(a.marginBps),
+          cumFunding: n6(a.cumulativeFunding), hedgeBps: Number(a.hedgeRatioBps), marginBps: Number(a.marginRatioBps),
           longUsd: spot * price, shortUsd: short * price, netDeltaEth: spot - short, netDeltaUsd: (spot - short) * price,
           margin: tv - spot * price, fundingPaid: 0,
         });
+      } else if (addr === ADDR.strategy.toLowerCase()) {
+        const d = decodeEventLog({ abi: strategyAbi, data: l.data, topics: l.topics }) as any;
+        const base = { block: Number(l.blockNumber), tx: l.transactionHash! };
+        if (d.eventName === "BreakerTripped") vaultEvents.push({ ...base, kind: "Breaker", text: `Circuit breaker tripped: ${d.args.reason}` });
+        if (d.eventName === "TargetLeverageSet") vaultEvents.push({ ...base, kind: "Leverage", text: `Target leverage set to ${(Number(d.args.bps) / 1e4).toFixed(2)}x` });
+        if (d.eventName === "MarginToppedUp") vaultEvents.push({ ...base, kind: "Margin", text: `Margin topped up by ${fmt(n6(d.args.amount))} USDC` });
       } else if (addr === ADDR.vault.toLowerCase()) {
         const d = decodeEventLog({ abi: vaultAbi, data: l.data, topics: l.topics }) as any;
         const a = d.args;
         const base = { block: Number(l.blockNumber), tx: l.transactionHash! };
         const who = (x: string) => `${x.slice(0, 6)}…${x.slice(-4)}`;
         switch (d.eventName) {
-          case "Deposit": vaultEvents.push({ ...base, kind: "Mint", amount: n6(a.assets), text: `${who(a.owner)} minted with ${fmt(n6(a.assets))} USDC` }); break;
-          case "Withdraw": vaultEvents.push({ ...base, kind: "Redeem", amount: -n6(a.assets), text: `${who(a.owner)} redeemed ${fmt(n6(a.assets))} USDC` }); break;
-          case "Rebalanced": vaultEvents.push({ ...base, t: Number(a.timestamp), kind: "Rebalance", text: `Keeper rebalance: deployed ${fmt(n6(a.allocated))} · pulled back ${fmt(n6(a.deallocated))} · idle ${fmt(n6(a.idle))} · NAV ${fmt(n6(a.totalAssets))}` }); break;
-          case "PerformanceFee": if (a.feeAssets > 0n) vaultEvents.push({ ...base, kind: "Fee", text: `Performance fee series #${a.seriesId}: ${fmt(n6(a.feeAssets))} USDC` }); break;
-          case "ExitFee": vaultEvents.push({ ...base, kind: "Exit fee", text: `Exit fee ${fmt(n6(a.fee))} USDC (${(Number(a.feeBps) / 100).toFixed(2)}%) on ${fmt(n6(a.gross))}` }); break;
-          case "RedeemQueued": vaultEvents.push({ ...base, kind: "Queue", text: `Request #${a.requestId} queued: ${fmt(n6(a.amount))} USDC` }); break;
-          case "QueueProcessed": vaultEvents.push({ ...base, kind: "Queue", text: `Queue filled ${fmt(n6(a.filled))} USDC (${(Number(formatUnits(a.fillRatioWad, 16))).toFixed(1)}%), remaining ${fmt(n6(a.remaining))}` }); break;
-          case "SeriesCreated": vaultEvents.push({ ...base, kind: "Series", text: `Series #${a.seriesId} opened at PPS ${n18(a.pps).toFixed(6)}` }); break;
-          case "SeriesConsolidated": vaultEvents.push({ ...base, kind: "Series", text: `Series #${a.seriesId} consolidated into MDELTA (${fmt(n6(a.assets))} USDC)` }); break;
+          case "DepositRequest": vaultEvents.push({ ...base, kind: "Subscribe", amount: n6(a.assets), text: `${who(a.controller)} requested a subscription of ${fmt(n6(a.assets))} USDC (epoch ${a.requestId})` }); break;
+          case "RedeemRequest": vaultEvents.push({ ...base, kind: "Redeem", text: `${who(a.controller)} requested a redemption of ${fmt(n18(a.shares), 4)} units (epoch ${a.requestId})` }); break;
+          case "Deposit": vaultEvents.push({ ...base, kind: "Claim", text: `${who(a.owner)} claimed ${fmt(n18(a.shares), 4)} units` }); break;
+          case "Withdraw": vaultEvents.push({ ...base, kind: "Claim", amount: -n6(a.assets), text: `${who(a.owner)} claimed ${fmt(n6(a.assets))} USDC` }); break;
+          case "EpochClosed": vaultEvents.push({ ...base, kind: "Epoch", text: `Epoch ${a.epoch} closed: ${fmt(n6(a.depositAssets))} USDC in, ${fmt(n18(a.redeemShares), 4)} units out` }); break;
+          case "EpochSettled": vaultEvents.push({ ...base, kind: "Epoch", text: `Epoch ${a.epoch} settled at NAV ${n6(a.navUsd).toFixed(4)}: ${fmt(n18(a.sharesMinted), 2)} units minted, ${fmt(n18(a.sharesRedeemed), 2)} redeemed, fill ${(Number(formatUnits(a.fillWad, 16))).toFixed(1)}%, levy ${(Number(a.levyBps) / 100).toFixed(2)}%` }); break;
+          case "StrategyFlow": vaultEvents.push({ ...base, kind: a.toStrategy ? "Deploy" : "Recall", text: `${a.toStrategy ? "Deployed" : "Recalled"} ${fmt(n6(a.moved))} USDC ${a.toStrategy ? "to" : "from"} the strategy` }); break;
+          case "EarlyRedemptionFee": vaultEvents.push({ ...base, kind: "Fee", text: `Early-redemption fee: ${fmt(n18(a.shares), 4)} units (${(Number(a.feeBps) / 100).toFixed(2)}%)` }); break;
         }
       }
     } catch {

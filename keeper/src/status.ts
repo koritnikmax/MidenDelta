@@ -1,29 +1,40 @@
 import { formatUnits, formatEther } from "viem";
 import { publicClient, account, deployments } from "./config.js";
-import { vaultAbi, strategyAbi } from "./abi.js";
+import { vaultAbi, strategyAbi, adapterAbi, oracleAbi, tokenAbi } from "./abi.js";
+import { coreRole } from "./hyperliquid.js";
 
 const bal = await publicClient.getBalance({ address: account.address });
-console.log(`keeper ${account.address}  HYPE ${formatEther(bal)}  chain ${await publicClient.getChainId()}`);
-if (!deployments) process.exit(0);
-const { vault, strategy } = deployments;
+console.log(`keeper ${account.address}  HYPE ${formatEther(bal)}  HyperCore account: ${await coreRole(account.address)}`);
+if (!deployments) {
+  console.log("fund contracts: not deployed yet");
+  process.exit(0);
+}
+const d = deployments!;
 const r = (address: `0x${string}`, abi: any, functionName: string, args: unknown[] = []) =>
   publicClient.readContract({ address, abi, functionName, args }) as Promise<any>;
-const [nav, pps, q, os, fees, tv, hs] = await Promise.all([
-  r(vault, vaultAbi, "totalAssets"),
-  r(vault, vaultAbi, "pricePerShare"),
-  r(vault, vaultAbi, "totalQueued"),
-  r(vault, vaultAbi, "outstandingSeries"),
-  r(vault, vaultAbi, "totalFeesCollected"),
-  r(strategy, strategyAbi, "totalValue"),
-  r(strategy, strategyAbi, "hedgeStats"),
+const [assets, supply, nav, epoch, settled, queued, reserved, levies, sv, lev, margin] = await Promise.all([
+  r(d.vault, vaultAbi, "totalAssets"),
+  r(d.token, tokenAbi, "totalSupply"),
+  r(d.oracle, oracleAbi, "navPerUnitUSD"),
+  r(d.vault, vaultAbi, "currentEpoch"),
+  r(d.vault, vaultAbi, "lastSettledEpoch"),
+  r(d.vault, vaultAbi, "queuedShares"),
+  r(d.vault, vaultAbi, "reservedAssets"),
+  r(d.vault, vaultAbi, "totalLevies"),
+  r(d.strategy, strategyAbi, "totalValue"),
+  r(d.adapter, adapterAbi, "getLeverage", ["0x4554480000000000000000000000000000000000000000000000000000000000"]),
+  r(d.adapter, adapterAbi, "getMarginRatio", ["0x4554480000000000000000000000000000000000000000000000000000000000"]),
 ]);
 console.log({
-  nav: formatUnits(nav, 6),
-  pps: formatUnits(pps, 18),
-  queued: formatUnits(q, 6),
-  outstandingSeries: os.map(String),
-  perfFees: formatUnits(fees, 6),
-  strategyValue: formatUnits(tv, 6),
-  hedgeRatioBps: String(hs[0]),
-  marginBps: String(hs[1]),
+  fundAssets: formatUnits(assets, 6),
+  units: formatUnits(supply, 18),
+  navPerUnitUSD: formatUnits(nav, 6),
+  openEpoch: String(epoch),
+  lastSettledEpoch: String(settled),
+  queuedRedemptionUnits: formatUnits(queued, 18),
+  reservedForClaims: formatUnits(reserved, 6),
+  leviesRetained: formatUnits(levies, 6),
+  strategyValue: formatUnits(sv, 6),
+  leverage: `${(Number(lev) / 1e4).toFixed(2)}x`,
+  marginRatio: `${(Number(margin) / 100).toFixed(2)}%`,
 });

@@ -12,5 +12,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+      <!-- md-gate-loader: the marketing site's eligibility gate (served next to /demo/ on the live site) -->
+    <script>
+      (function () {
+        var s = document.createElement("script");
+        s.type = "module";
+        s.textContent = 'import("../assets/js/gate.js").then(function (m) { m.requirePageGate({ home: "../" }); }).catch(function () {});';
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

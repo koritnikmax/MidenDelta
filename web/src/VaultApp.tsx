@@ -1,16 +1,44 @@
-import { useState } from "react";
-import { useAccount, useChainId, useSwitchChain, useWriteContract, usePublicClient, useReadContract } from "wagmi";
+import { useEffect, useState } from "react";
+import { useAccount, useChainId, useSwitchChain, useWriteContract, usePublicClient } from "wagmi";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
-import { vaultAbi, usdcAbi } from "./abi";
+import { vaultAbi, usdcAbi, onboardingAbi } from "./abi";
 import { ADDR, hyperEvmTestnet, explorer } from "./wagmi";
 import { useWallet } from "./useWallet";
-import { useVaultState, useUserState, useRequests, fmtUsd } from "./useVault";
+import { useFundState, useInvestorState, fmtUsd, fmtUnits } from "./useVault";
 
 type Status = { kind: "info" | "ok" | "err"; msg: string; hash?: string } | null;
 
+// Testnet onboarding choices. A blocked country (US) shows the eligibility check rejecting the wallet.
+const COUNTRIES = [
+  { code: 276, name: "Germany" },
+  { code: 40, name: "Austria" },
+  { code: 756, name: "Switzerland" },
+  { code: 438, name: "Liechtenstein" },
+  { code: 442, name: "Luxembourg" },
+  { code: 840, name: "United States (blocked)" },
+];
+
+const NOT_DEPLOYED = /^0x0+$/.test(ADDR.vault);
+
+function useNow() {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+const mmss = (s: number) => {
+  const m = Math.floor(Math.max(0, s) / 60);
+  const r = Math.max(0, s) % 60;
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m}:${String(r).padStart(2, "0")}`;
+};
+
 export default function VaultApp() {
-  const [tab, setTab] = useState<"mint" | "redeem">("mint");
+  const [tab, setTab] = useState<"subscribe" | "redeem">("subscribe");
   const [amount, setAmount] = useState("");
+  const [country, setCountry] = useState(276);
   const [status, setStatus] = useState<Status>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,32 +48,21 @@ export default function VaultApp() {
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const pc = usePublicClient();
-  const vs = useVaultState();
-  const us = useUserState();
-  const reqs = useRequests(us.requestIds);
+  const fund = useFundState();
+  const me = useInvestorState();
+  const now = useNow();
 
   const wrongChain = isConnected && chainId !== hyperEvmTestnet.id;
+  const decimals = tab === "subscribe" ? 6 : 18;
   let parsed = 0n;
   try {
-    parsed = amount ? parseUnits(amount, 6) : 0n;
+    parsed = amount ? parseUnits(amount, decimals) : 0n;
   } catch {
     parsed = 0n;
   }
 
-  const { data: preview } = useReadContract({
-    address: ADDR.vault, abi: vaultAbi, functionName: "previewDeposit", args: [parsed],
-    query: { enabled: tab === "mint" && parsed > 0n },
-  });
-  const { data: exitPreview } = useReadContract({
-    address: ADDR.vault, abi: vaultAbi, functionName: "previewExitFee", args: [parsed],
-    query: { enabled: tab === "redeem" && parsed > 0n },
-  });
-
-  const refresh = () => {
-    vs.refetch();
-    us.refetch();
-    reqs.refetch();
-  };
+  const closesIn = fund.epochOpenedAt !== undefined && fund.epochDuration !== undefined ? Number(fund.epochOpenedAt + fund.epochDuration) - now : undefined;
+  const awaitingSettlement = fund.epoch !== undefined && fund.lastSettled !== undefined && fund.lastSettled < fund.epoch - 1n;
 
   async function run(label: string, fn: () => Promise<`0x${string}`>) {
     setBusy(true);
@@ -55,8 +72,9 @@ export default function VaultApp() {
       setStatus({ kind: "info", msg: `${label}: waiting for confirmation…`, hash });
       const rc = await pc!.waitForTransactionReceipt({ hash });
       if (rc.status !== "success") throw new Error("transaction reverted");
-      setStatus({ kind: "ok", msg: `${label} confirmed`, hash });
-      refresh();
+      setStatus({ kind: "ok", msg: `${label}: confirmed`, hash });
+      fund.refetch();
+      me.refetch();
       return true;
     } catch (e: any) {
       setStatus({ kind: "err", msg: e?.shortMessage ?? e?.message ?? String(e) });
@@ -66,47 +84,39 @@ export default function VaultApp() {
     }
   }
 
-  const faucet = () => run("Faucet (10,000 test USDC)", () => writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "faucet" }));
+  const faucet = () => run("Get 10,000 test USDC", () => writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "faucet" }));
+  const register = () => run("Register as test investor", () => writeContractAsync({ address: ADDR.onboarding, abi: onboardingAbi, functionName: "registerMe", args: [country] }));
 
-  async function mint() {
-    if (!us.address) return;
-    if ((us.allowance ?? 0n) < parsed) {
-      const ok = await run("Approve USDC", () =>
-        writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "approve", args: [ADDR.vault, maxUint256] }),
-      );
+  async function requestSubscription() {
+    if (!me.address) return;
+    if ((me.allowance ?? 0n) < parsed) {
+      const ok = await run("Approve USDC", () => writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "approve", args: [ADDR.vault, maxUint256] }));
       if (!ok) return;
     }
-    const ok = await run(`Mint with ${fmtUsd(parsed)} USDC`, () =>
-      writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "deposit", args: [parsed, us.address!] }),
+    const ok = await run(`Request subscription of ${fmtUsd(parsed)} USDC`, () =>
+      writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "requestDeposit", args: [parsed, me.address!, me.address!] }),
     );
     if (ok) setAmount("");
   }
 
-  async function redeem(all = false) {
-    if (!us.address) return;
-    const ok = await run(all ? "Redeem entire position" : `Redeem ${fmtUsd(parsed)} USDC`, () =>
-      all
-        ? writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "redeemAll", args: [us.address!] })
-        : writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "redeem", args: [parsed, us.address!] }),
+  async function requestRedemption() {
+    if (!me.address) return;
+    const ok = await run(`Request redemption of ${fmtUnits(parsed)} units`, () =>
+      writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "requestRedeem", args: [parsed, me.address!, me.address!] }),
     );
     if (ok) setAmount("");
   }
 
-  const claim = (id: bigint) => run(`Claim request #${id}`, () => writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "claim", args: [id] }));
+  const claimUnits = () =>
+    run("Claim units", () => writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "mint", args: [me.claimableUnits!, me.address!, me.address!] }));
+  const claimUsdc = () =>
+    run("Claim USDC", () => writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "withdraw", args: [me.claimableUsdc!, me.address!, me.address!] }));
 
-  // -------- derived
-  const belowMin = tab === "mint" && parsed > 0n && vs.minDeposit !== undefined && parsed < vs.minDeposit;
-  const tooMuchUsdc = tab === "mint" && parsed > (us.usdc ?? 0n);
-  const tooMuchPos = tab === "redeem" && parsed > (us.totalValue ?? 0n);
-  const previewSeries = preview?.[0];
-  const willLandOutstanding = previewSeries !== undefined && previewSeries !== 0n;
-  const exitFee = exitPreview?.[1] ?? 0n;
-  const exitBps = exitPreview?.[0] ?? 0n;
-  const net = parsed > exitFee ? parsed - exitFee : 0n;
-  const instant = (vs.instantLiquidity ?? 0n) < net ? vs.instantLiquidity ?? 0n : net;
-  const queued = net - instant;
+  const tooMuch = tab === "subscribe" ? parsed > (me.usdc ?? 0n) : parsed > (me.units ?? 0n);
+  const indicativeUnits = tab === "subscribe" && fund.nav ? (parsed * 10n ** 18n) / fund.nav : undefined;
+  const indicativeUsdc = tab === "redeem" && fund.nav ? (parsed * fund.nav) / 10n ** 18n : undefined;
 
-  const actionBtn = () => {
+  const gate = () => {
     if (!isConnected)
       return (
         <>
@@ -116,180 +126,145 @@ export default function VaultApp() {
           {walletError && <div className="notice err">{walletError}</div>}
         </>
       );
-    if (wrongChain)
-      return (
-        <button className="btn block" onClick={() => switchChain({ chainId: hyperEvmTestnet.id })}>
-          Switch to HyperEVM Testnet
-        </button>
-      );
-    if (/^0x0+$/.test(ADDR.vault))
-      return <div className="notice info">Contracts are being deployed to HyperEVM testnet. Minting opens shortly.</div>;
-    if (tab === "mint")
-      return (
-        <button className="btn block" disabled={busy || parsed === 0n || belowMin || tooMuchUsdc} onClick={mint}>
-          {(us.allowance ?? 0n) < parsed && parsed > 0n ? "Approve & mint MDELTA" : "Mint MDELTA"}
-        </button>
-      );
-    return (
-      <button className="btn block" disabled={busy || parsed === 0n || tooMuchPos} onClick={() => redeem(false)}>
-        Redeem & burn
-      </button>
-    );
+    if (wrongChain) return <button className="btn block" onClick={() => switchChain({ chainId: hyperEvmTestnet.id })}>Switch to HyperEVM Testnet</button>;
+    if (NOT_DEPLOYED) return <div className="notice info">The fund contracts are being deployed to HyperEVM testnet. Dealing opens shortly.</div>;
+    if (fund.paused) return <div className="notice err">Dealing is paused: a circuit breaker has tripped. Only the fund manager can resume it.</div>;
+    return null;
   };
+
+  const blocker = gate();
 
   return (
     <section id="app">
       <div className="wrap">
         <div className="sec-head">
-          <div className="eyebrow dark">HyperEVM testnet vault</div>
-          <h2>Mint and redeem MDELTA</h2>
+          <div className="eyebrow dark">HyperEVM testnet fund</div>
+          <h2>Subscribe and redeem</h2>
           <p>
-            Deposit USDC to mint MidenDelta vault tokens at the live NAV. Burn them to get USDC back. Redemptions are paid in the same block
-            from the liquidity buffer, and larger ones are filled pro-rata as the keeper unwinds positions.
+            Dealing works like a regulated fund with the unit register on-chain. You request a subscription or redemption, the epoch closes
+            at its cutoff, the administrator publishes the NAV, and you claim your units or USDC. On testnet an epoch lasts{" "}
+            {fund.epochDuration ? mmss(Number(fund.epochDuration)) : "a few minutes"}; the fund itself deals daily.
           </p>
         </div>
 
         <div className="app-grid">
           {/* ---------------- action card ---------------- */}
           <div className="card">
-            <div className="tabs">
-              <button className={tab === "mint" ? "on" : ""} onClick={() => { setTab("mint"); setAmount(""); }}>Mint</button>
-              <button className={tab === "redeem" ? "on" : ""} onClick={() => { setTab("redeem"); setAmount(""); }}>Redeem</button>
-            </div>
-
-            <div className="row" style={{ paddingTop: 0 }}>
-              <span>{tab === "mint" ? "You deposit" : "You redeem (USDC value)"}</span>
-              <span>
-                {tab === "mint" ? "Wallet: " : "Position: "}
-                <b className="num">{fmtUsd(tab === "mint" ? us.usdc : us.totalValue)} USDC</b>
-              </span>
-            </div>
-            <div className="field">
-              <input inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label="Amount in USDC" />
-              <button className="max" onClick={() => setAmount(formatUnits((tab === "mint" ? us.usdc : us.totalValue) ?? 0n, 6))}>MAX</button>
-              <span className="unit">USDC</span>
-            </div>
-
-            <div style={{ marginTop: 14 }}>
-              {tab === "mint" ? (
+            {blocker ??
+              (!me.registered ? (
                 <>
-                  <div className="row"><span>Price per share (NAV)</span><b className="num">{vs.pps ? Number(formatUnits(vs.pps, 18)).toFixed(6) : "–"} USDC</b></div>
-                  <div className="row"><span>You receive</span><b className="num">{preview ? Number(formatUnits(preview[1], 18)).toLocaleString("en-US", { maximumFractionDigits: 4 }) : "–"} shares</b></div>
-                  <div className="row">
-                    <span>Series (ERC-8113)</span>
-                    <b>{previewSeries === undefined ? "–" : willLandOutstanding ? <span className="chip amber">Series #{String(previewSeries)} · locked until new high</span> : <span className="chip green">Lead · tradable MDELTA</span>}</b>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 500 }}>Testnet onboarding</h3>
+                  <p className="hint" style={{ marginTop: 0 }}>
+                    The fund is open to professional and semi-professional investors only. In production the administrator verifies you through
+                    KYC. Here you can register your wallet as a test professional investor.
+                  </p>
+                  <div className="row"><span>Country of residence</span>
+                    <select value={country} onChange={(e) => setCountry(Number(e.target.value))} className="select" aria-label="Country of residence">
+                      {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
                   </div>
-                  <div className="row"><span>Fees</span><b>0% entry, 0% management, 19.5% performance</b></div>
-                  {belowMin && <div className="notice">Minimum investment is {fmtUsd(vs.minDeposit, 0)} USDC.</div>}
-                  {willLandOutstanding && (
-                    <div className="notice info">
-                      The vault is below its high-water mark, so your deposit goes into its own series. You only pay the performance fee on
-                      gains from your entry price. When the lead series sets a new high, your series is consolidated into tradable MDELTA.
-                    </div>
-                  )}
+                  <button className="btn block" style={{ marginTop: 16 }} onClick={register} disabled={busy}>Register as test investor</button>
                 </>
+              ) : !me.verified ? (
+                <div className="notice err">
+                  This wallet is registered but not eligible (blocked country or expired KYC). The fund does not accept US persons.
+                </div>
               ) : (
                 <>
-                  <div className="row"><span>Dynamic exit fee</span><b className="num">{(Number(exitBps) / 100).toFixed(2)}% · {fmtUsd(exitFee)} USDC</b></div>
-                  <div className="row"><span>Paid in the same block (buffer)</span><b className="num">{fmtUsd(instant)} USDC</b></div>
-                  <div className="row"><span>Queued · pro-rata fill</span><b className="num">{fmtUsd(queued)} USDC</b></div>
+                  <div className="tabs">
+                    <button className={tab === "subscribe" ? "on" : ""} onClick={() => { setTab("subscribe"); setAmount(""); }}>Subscribe</button>
+                    <button className={tab === "redeem" ? "on" : ""} onClick={() => { setTab("redeem"); setAmount(""); }}>Redeem</button>
+                  </div>
+                  <div className="row" style={{ paddingTop: 0 }}>
+                    <span>{tab === "subscribe" ? "Amount" : "Units to redeem"}</span>
+                    <span>
+                      {tab === "subscribe" ? "Wallet: " : "Held: "}
+                      <b>{tab === "subscribe" ? `${fmtUsd(me.usdc)} USDC` : `${fmtUnits(me.units)} units`}</b>
+                    </span>
+                  </div>
+                  <div className="field">
+                    <input inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label={tab === "subscribe" ? "Amount in USDC" : "Units to redeem"} />
+                    <button className="max" onClick={() => setAmount(formatUnits((tab === "subscribe" ? me.usdc : me.units) ?? 0n, decimals))}>MAX</button>
+                    <span className="unit">{tab === "subscribe" ? "USDC" : "units"}</span>
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    <div className="row"><span>Last official NAV per unit</span><b>{fund.nav ? `${Number(formatUnits(fund.nav, 6)).toFixed(4)} USDC` : "–"}</b></div>
+                    {tab === "subscribe" ? (
+                      <div className="row"><span>Indicative units</span><b>{indicativeUnits !== undefined ? fmtUnits(indicativeUnits) : "–"}</b></div>
+                    ) : (
+                      <div className="row"><span>Indicative proceeds</span><b>{indicativeUsdc !== undefined ? `${fmtUsd(indicativeUsdc)} USDC` : "–"}</b></div>
+                    )}
+                    <div className="row"><span>Settles at</span><b>{fund.epoch !== undefined ? `end of epoch ${fund.epoch} (${closesIn !== undefined && closesIn > 0 ? `in ${mmss(closesIn)}` : "closing now"})` : "–"}</b></div>
+                    <div className="row"><span>Fees</span><b>19.5% performance fee above high-water mark</b></div>
+                  </div>
                   <p className="hint">
-                    Only net outflow pays the exit fee. The rate rises convexly with queue depth, and the fee stays in the vault for the remaining holders.
+                    {tab === "subscribe"
+                      ? "Units are priced at the NAV struck for the epoch, not the NAV shown here."
+                      : "If net redemptions exceed 15% of NAV in an epoch, every request is filled pro-rata and the rest rolls over. Net outflows pay an anti-dilution levy that stays in the fund."}
                   </p>
-                  {tooMuchPos && <div className="notice">That's more than your position.</div>}
+                  {tooMuch && parsed > 0n && <div className="notice">That's more than you hold.</div>}
+                  <button
+                    className="btn block"
+                    style={{ marginTop: 14 }}
+                    disabled={busy || parsed === 0n || tooMuch}
+                    onClick={tab === "subscribe" ? requestSubscription : requestRedemption}
+                  >
+                    {tab === "subscribe" ? ((me.allowance ?? 0n) < parsed && parsed > 0n ? "Approve and request subscription" : "Request subscription") : "Request redemption"}
+                  </button>
                 </>
-              )}
-            </div>
+              ))}
 
-            <div style={{ marginTop: 18 }}>{actionBtn()}</div>
-            {isConnected && !wrongChain && !/^0x0+$/.test(ADDR.vault) && (
+            {isConnected && !wrongChain && !NOT_DEPLOYED && me.verified && (
               <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                 <button className="btn soft" onClick={faucet} disabled={busy}>Get 10,000 test USDC</button>
-                {tab === "redeem" && (us.totalValue ?? 0n) > 0n && (
-                  <button className="btn soft" onClick={() => redeem(true)} disabled={busy}>Redeem everything</button>
-                )}
               </div>
             )}
-            {!isConnected && <p className="hint">You'll need a little testnet HYPE for gas. The test USDC comes from the faucet button.</p>}
+            {!isConnected && <p className="hint">You'll need a little testnet HYPE for gas. Test USDC comes from the faucet button after onboarding.</p>}
 
             {status && (
-              <div className={`notice ${status.kind === "info" ? "info" : status.kind}`}>
+              <div className={`notice ${status.kind}`}>
                 {status.msg}{" "}
-                {status.hash && (
-                  <a href={explorer(status.hash, "tx")} target="_blank" rel="noreferrer">View tx ↗</a>
-                )}
+                {status.hash && <a href={explorer(status.hash, "tx")} target="_blank" rel="noreferrer">View tx</a>}
               </div>
             )}
           </div>
 
           {/* ---------------- position card ---------------- */}
           <div className="card white">
-            <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 600 }}>Your position</h3>
+            <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 500 }}>Your position</h3>
             {!isConnected ? (
-              <p className="hint">Connect a wallet to see your MDELTA balance, series and pending redemptions.</p>
+              <p className="hint">Connect a wallet to see your units, open requests and claims.</p>
             ) : (
               <>
-                <div className="kpi" style={{ border: 0, padding: "10px 0" }}>
-                  <div className="v num">{fmtUsd(us.totalValue)} <span style={{ fontSize: 18, color: "var(--muted)" }}>USDC</span></div>
-                  <div className="k">Total value at current NAV</div>
+                <div className="kpi">
+                  <div className="v">{fmtUnits(me.units)} <span style={{ fontSize: 16, color: "var(--muted)" }}>units</span></div>
+                  <div className="k">
+                    Indicative value {me.units !== undefined && fund.nav ? `${fmtUsd((me.units * fund.nav) / 10n ** 18n)} USDC` : "–"} at the last official NAV
+                  </div>
                 </div>
-                <table className="table">
-                  <thead>
-                    <tr><th>Series</th><th className="r">Shares</th><th className="r">Value (USDC)</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><span className="chip green">Lead · MDELTA</span></td>
-                      <td className="r num">{us.leadShares !== undefined ? Number(formatUnits(us.leadShares, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 }) : "–"}</td>
-                      <td className="r num">{fmtUsd(us.leadValue)}</td>
-                    </tr>
-                    {us.seriesIds.map((id, i) => (
-                      <tr key={String(id)}>
-                        <td><span className="chip amber">Series #{String(id)}</span></td>
-                        <td className="r num">{Number(formatUnits(us.seriesShares[i], 18)).toLocaleString("en-US", { maximumFractionDigits: 4 })}</td>
-                        <td className="r num">{fmtUsd(us.seriesValues[i])}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
                 <div className="sep" />
-                <h4 style={{ margin: "0 0 8px", fontWeight: 600 }}>Redemption requests</h4>
-                {reqs.items.length === 0 ? (
-                  <p className="hint" style={{ marginTop: 0 }}>No queued redemptions.</p>
-                ) : (
-                  <table className="table">
-                    <thead>
-                      <tr><th>#</th><th className="r">Owed</th><th className="r">Filled</th><th className="r"></th></tr>
-                    </thead>
-                    <tbody>
-                      {reqs.items.map((r) => {
-                        const filledPct = r.amount > 0n ? Number(((r.amount - r.remaining) * 10000n) / r.amount) / 100 : 0;
-                        return (
-                          <tr key={String(r.id)}>
-                            <td>{String(r.id)}</td>
-                            <td className="r num">{fmtUsd(r.amount)}</td>
-                            <td className="r num">{filledPct.toFixed(1)}%</td>
-                            <td className="r">
-                              {r.claimable > 0n ? (
-                                <button className="btn" style={{ padding: "6px 12px", fontSize: 14 }} onClick={() => claim(r.id)} disabled={busy}>
-                                  Claim {fmtUsd(r.claimable)}
-                                </button>
-                              ) : r.remaining === 0n ? (
-                                <span className="chip green">Claimed</span>
-                              ) : (
-                                <span className="chip">Waiting for keeper</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
+                <div className="row"><span>Subscription waiting for settlement</span><b>{fmtUsd(me.pendingDeposit)} USDC</b></div>
+                <div className="row">
+                  <span>Units ready to claim</span>
+                  <b>
+                    {(me.claimableUnits ?? 0n) > 0n ? (
+                      <button className="btn" style={{ padding: "6px 14px", fontSize: 14 }} onClick={claimUnits} disabled={busy}>Claim {fmtUnits(me.claimableUnits)}</button>
+                    ) : "0.00"}
+                  </b>
+                </div>
+                <div className="row"><span>Redemption waiting for settlement</span><b>{fmtUnits(me.pendingRedeemUnits)} units</b></div>
+                <div className="row">
+                  <span>USDC ready to claim</span>
+                  <b>
+                    {(me.claimableUsdc ?? 0n) > 0n ? (
+                      <button className="btn" style={{ padding: "6px 14px", fontSize: 14 }} onClick={claimUsdc} disabled={busy}>Claim {fmtUsd(me.claimableUsdc)}</button>
+                    ) : "0.00"}
+                  </b>
+                </div>
                 <div className="sep" />
-                <div className="row"><span>Instant liquidity in buffer</span><b className="num">{fmtUsd(vs.instantLiquidity)} USDC</b></div>
-                <div className="row"><span>Vault redemption queue</span><b className="num">{fmtUsd(vs.totalQueued)} USDC</b></div>
+                <div className="row"><span>Open epoch</span><b>{fund.epoch !== undefined ? String(fund.epoch) : "–"}{closesIn !== undefined ? `, closes ${closesIn > 0 ? `in ${mmss(closesIn)}` : "now"}` : ""}</b></div>
+                <div className="row"><span>Settlement</span><b>{awaitingSettlement ? "waiting for NAV" : `epoch ${fund.lastSettled !== undefined ? String(fund.lastSettled) : "–"} settled`}</b></div>
+                <p className="hint">Units can't be sent to other wallets directly: transfers between eligible investors go through the administrator.</p>
               </>
             )}
           </div>

@@ -91,18 +91,20 @@ export default function OpsApp() {
   const L = live;
   const longUsd = L ? L.spotEth * L.price : 0;
   const shortUsd = L ? L.shortEth * L.price : 0;
-  const margin = L ? L.tv - longUsd : 0;
+  const margin = L ? L.venueValue - longUsd : 0;
   const netEth = L ? L.spotEth - L.shortEth : 0;
-  const effLev = margin > 0 ? shortUsd / margin : 0;
+  const effLev = L ? L.leverageBps / 1e4 : 0;
   const liqDist = shortUsd > 0 ? (margin / shortUsd) * 100 : 0; // % ETH rise that wipes short margin
   const liqPrice = L && L.shortEth > 0 ? L.price + margin / L.shortEth : 0;
-  const targetMargin = L ? 10000 - L.spotBps : 909;
-  const hedgeOk = L ? Math.abs(L.hedgeBps - 10000) <= L.driftBps : true;
-  const marginOk = L ? L.marginBps <= (targetMargin * 3) / 2 && L.marginBps >= (targetMargin * 2) / 3 : true;
+  const hedgeOk = L ? Math.abs(L.hedgeBps - 10000) <= L.bandBps : true;
+  const marginOk = L ? L.shortEth === 0 || L.marginRatioBps >= L.minMarginBps : true;
   const staleSec = L && L.lastFundingAt ? now - L.lastFundingAt : Infinity;
-  const bufferTarget = L ? (L.nav * L.bufferBps) / 10000 : 0;
-  const freeIdle = L ? L.idle - L.reserved : 0;
+  const bufferNow = L ? L.strategyValue - L.venueValue : 0;
+  const bufferTarget = L ? (L.strategyValue * L.bufferBps) / 10000 : 0;
   const annualised = L ? L.lastRate * 8760 * 100 : 0;
+  const epochClosesIn = L ? L.epochOpenedAt + L.epochDuration - now : 0;
+  // leverage drifts with price between rebalances; alert only once it leaves the band above the cap
+  const leverageAlert = L ? L.leverageBps > L.maxLeverageBps * (1 + L.bandBps / 1e4) : false;
 
   const M = market;
   const fundingApr = M ? M.funding * 8760 * 100 : 0;
@@ -125,9 +127,11 @@ export default function OpsApp() {
         )}
         <Pill tone={gas > 0.05 ? "ok" : gas > 0.005 ? "warn" : "bad"}>Gas {gas.toFixed(4)} HYPE</Pill>
         <Pill tone={coreActive ? "ok" : "bad"}>HyperCore account {core ? (coreActive ? core.role : "not activated") : "…"}</Pill>
+        {deployed && <Pill tone={L?.vaultPaused || L?.strategyPaused ? "bad" : "ok"}>{L?.vaultPaused || L?.strategyPaused ? "Breaker tripped, paused" : "Dealing open"}</Pill>}
         {deployed && <Pill tone={hedgeOk ? "ok" : "bad"}>Hedge {L ? (L.hedgeBps / 100).toFixed(2) : "–"}%</Pill>}
-        {deployed && <Pill tone={marginOk ? "ok" : "warn"}>Margin {L ? (L.marginBps / 100).toFixed(2) : "–"}%</Pill>}
-        {deployed && <Pill tone={L && L.queued > 0 ? "warn" : "ok"}>Queue {L ? fmt(L.queued) : "–"} USDC</Pill>}
+        {deployed && <Pill tone={leverageAlert ? "bad" : "ok"}>Leverage {L ? `${effLev.toFixed(2)}x / ${L.maxLeverageBps / 1e4}x cap` : "–"}</Pill>}
+        {deployed && <Pill tone={marginOk ? "ok" : "bad"}>Margin {L ? (L.marginRatioBps / 100).toFixed(1) : "–"}%</Pill>}
+        {deployed && <Pill tone={L && L.queuedUnits > 0 ? "warn" : "ok"}>Queue {L ? fmt(L.queuedUnits, 2) : "–"} units</Pill>}
         <span className="muted small refresh">
           {progress !== null ? `Loading history ${progress}%` : updated ? `${L ? `Block ${L.block.toLocaleString()}, ` : ""}updated ${ago(updated, Math.floor(Date.now() / 1000))}, every 15 s` : "Loading"}
           <button className="mini" onClick={refresh}>Refresh</button>
@@ -227,25 +231,26 @@ export default function OpsApp() {
                 <div className="leg-h"><span className="mark fill" />Long leg, spot ETH</div>
                 <div className="big">{L ? L.spotEth.toFixed(4) : "–"} <small>ETH</small></div>
                 <div className="kv"><span>Market value</span><b>${fmt(longUsd)}</b></div>
-                <div className="kv"><span>Share of strategy</span><b>{L && L.tv ? ((longUsd / L.tv) * 100).toFixed(2) : "–"}% <em>target {L ? (L.spotBps / 100).toFixed(2) : "–"}%</em></b></div>
+                <div className="kv"><span>Share of strategy value</span><b>{L && L.strategyValue ? ((longUsd / L.strategyValue) * 100).toFixed(2) : "–"}%</b></div>
                 <div className="kv"><span>ETH mark price</span><b>${L ? fmt(L.price) : "–"}</b></div>
               </div>
 
               <div className="panel leg">
-                <div className="leg-h"><span className="mark hollow" />Short leg, ETH perp ({L?.leverage ?? 10}× target)</div>
+                <div className="leg-h"><span className="mark hollow" />Short leg, ETH perp ({L ? L.targetLeverageBps / 1e4 : 3}× target, {L ? L.maxLeverageBps / 1e4 : 3}× cap)</div>
                 <div className="big">−{L ? L.shortEth.toFixed(4) : "–"} <small>ETH</small></div>
                 <div className="kv"><span>Notional</span><b>${fmt(shortUsd)}</b></div>
                 <div className="kv"><span>Margin equity incl. unrealised PnL</span><b>${fmt(margin)}</b></div>
-                <div className="kv"><span>Effective leverage</span><b className={effLev > (L?.leverage ?? 10) * 1.3 ? "bad" : ""}>{effLev.toFixed(2)}×</b></div>
+                <div className="kv"><span>Effective leverage</span><b className={leverageAlert ? "bad" : ""}>{effLev.toFixed(2)}×</b></div>
+                <div className="kv"><span>Margin ratio / floor</span><b className={marginOk ? "" : "bad"}>{L ? (L.marginRatioBps / 100).toFixed(1) : "–"}% / {L ? (L.minMarginBps / 100).toFixed(0) : "–"}%</b></div>
                 <div className="kv"><span>Margin wiped if ETH rises</span><b className={liqDist < 5 ? "bad" : ""}>+{liqDist.toFixed(2)}% to ${fmt(liqPrice)}</b></div>
               </div>
 
               <div className="panel leg">
                 <div className="leg-h"><span className="mark ring" />Net position</div>
                 <div className="big">{netEth >= 0 ? "+" : ""}{netEth.toFixed(4)} <small>ETH delta</small></div>
-                <div className="kv"><span>Net delta (USD)</span><b className={Math.abs(netEth * (L?.price ?? 0)) > (L?.tv ?? 0) * 0.02 ? "bad" : ""}>{netEth >= 0 ? "+" : "−"}${fmt(Math.abs(netEth * (L?.price ?? 0)))}</b></div>
-                <div className="kv"><span>Hedge ratio, short ÷ long</span><b className={hedgeOk ? "" : "bad"}>{L ? (L.hedgeBps / 100).toFixed(2) : "–"}% <em>band ±{L ? (L.driftBps / 100).toFixed(1) : "–"}%</em></b></div>
-                <div className="kv"><span>Strategy value</span><b>${L ? fmt(L.tv) : "–"}</b></div>
+                <div className="kv"><span>Net delta (USD)</span><b className={Math.abs(netEth * (L?.price ?? 0)) > (L?.strategyValue ?? 0) * 0.02 ? "bad" : ""}>{netEth >= 0 ? "+" : "−"}${fmt(Math.abs(netEth * (L?.price ?? 0)))}</b></div>
+                <div className="kv"><span>Hedge ratio, short ÷ long</span><b className={hedgeOk ? "" : "bad"}>{L ? (L.hedgeBps / 100).toFixed(2) : "–"}% <em>band ±{L ? (L.bandBps / 100).toFixed(1) : "–"}%</em></b></div>
+                <div className="kv"><span>Strategy value (venue + buffer)</span><b>${L ? fmt(L.strategyValue) : "–"}</b></div>
                 <div className="kv"><span>Funding earned, cumulative</span><b>+${L ? fmt(L.cumFunding) : "–"}</b></div>
                 <div className="kv"><span>Last funding applied</span><b>{L ? (L.lastRate * 100).toFixed(5) : "–"}%/h, {annualised.toFixed(2)}% APR</b></div>
               </div>
@@ -276,26 +281,26 @@ export default function OpsApp() {
                 </LineChart>
               </Chart>
 
-              <Chart title="Hedge ratio" sub={`Short ÷ long, %. Rebalance band ${L ? 100 - L.driftBps / 100 : 98}–${L ? 100 + L.driftBps / 100 : 102}%`}>
+              <Chart title="Hedge ratio" sub={`Short ÷ long, %. Rebalance band ${L ? 100 - L.bandBps / 100 : 98}–${L ? 100 + L.bandBps / 100 : 102}%`}>
                 <LineChart data={view.map((s) => ({ ...s, hr: s.hedgeBps / 100 }))}>
                   <CartesianGrid stroke={C.grid} vertical={false} />
                   <XAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} tickFormatter={tfmt} {...axis} minTickGap={50} />
                   <YAxis {...axis} domain={["auto", "auto"]} tickFormatter={(v) => `${v}%`} width={50} />
-                  <ReferenceArea y1={L ? 100 - L.driftBps / 100 : 98} y2={L ? 100 + L.driftBps / 100 : 102} fill={C.band} fillOpacity={0.05} />
+                  <ReferenceArea y1={L ? 100 - L.bandBps / 100 : 98} y2={L ? 100 + L.bandBps / 100 : 102} fill={C.band} fillOpacity={0.05} />
                   <ReferenceLine y={100} stroke="#555" />
                   <Tooltip {...tip} formatter={(v: number) => [`${v.toFixed(2)}%`, "Hedge ratio"]} />
                   <Line isAnimationActive={false} type="stepAfter" dataKey="hr" stroke={C.net} dot={false} strokeWidth={2} />
                 </LineChart>
               </Chart>
 
-              <Chart title="Short-leg margin" sub={`Margin equity as % of strategy. Target ${(targetMargin / 100).toFixed(2)}%, rebalance outside ${((targetMargin * 2) / 3 / 100).toFixed(1)}–${((targetMargin * 3) / 2 / 100).toFixed(1)}%`}>
+              <Chart title="Short-leg margin ratio" sub={`Margin equity ÷ short notional, %. Floor ${L ? L.minMarginBps / 100 : 20}% (top-up or breaker below it); 33% at 3x`}>
                 <LineChart data={view.map((s) => ({ ...s, mg: s.marginBps / 100 }))}>
                   <CartesianGrid stroke={C.grid} vertical={false} />
                   <XAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} tickFormatter={tfmt} {...axis} minTickGap={50} />
                   <YAxis {...axis} domain={[0, "auto"]} tickFormatter={(v) => `${v}%`} width={44} />
-                  <ReferenceArea y1={(targetMargin * 2) / 3 / 100} y2={(targetMargin * 3) / 2 / 100} fill={C.band} fillOpacity={0.05} />
-                  <ReferenceLine y={targetMargin / 100} stroke="#555" />
-                  <Tooltip {...tip} formatter={(v: number) => [`${v.toFixed(2)}%`, "Margin"]} />
+                  <ReferenceArea y1={0} y2={L ? L.minMarginBps / 100 : 20} fill={C.neg} fillOpacity={0.06} />
+                  <ReferenceLine y={L ? L.minMarginBps / 100 : 20} stroke={C.neg} strokeDasharray="4 4" />
+                  <Tooltip {...tip} formatter={(v: number) => [`${v.toFixed(2)}%`, "Margin ratio"]} />
                   <Line isAnimationActive={false} type="stepAfter" dataKey="mg" stroke={C.net} dot={false} strokeWidth={2} />
                 </LineChart>
               </Chart>
@@ -365,16 +370,17 @@ export default function OpsApp() {
 
           <div className="two">
             <div className="panel">
-              <h3>Vault and liquidity</h3>
-              <div className="kv"><span>NAV, all series</span><b>${L ? fmt(L.nav) : "–"}</b></div>
-              <div className="kv"><span>Price per MDELTA / high-water mark</span><b>{L ? L.pps.toFixed(6) : "–"} / {L ? L.hwm.toFixed(6) : "–"}</b></div>
-              <div className="kv"><span>MDELTA supply</span><b>{L ? fmt(L.supply, 4) : "–"}</b></div>
-              <div className="kv"><span>Deployed in strategy</span><b>${L ? fmt(L.tv) : "–"} ({L && L.nav ? ((L.tv / L.nav) * 100).toFixed(1) : "–"}%)</b></div>
-              <div className="kv"><span>Idle buffer, free / target</span><b className={freeIdle < bufferTarget * 0.5 ? "bad" : ""}>${fmt(freeIdle)} / ${fmt(bufferTarget)}</b></div>
-              <div className="kv"><span>Redemption queue / reserved for claims</span><b>${L ? fmt(L.queued) : "–"} / ${L ? fmt(L.reserved) : "–"}</b></div>
-              <div className="kv"><span>Performance fees ({L ? L.perfFeeBps / 100 : 19.5}%) / exit fees kept in NAV</span><b>${L ? fmt(L.perfFees) : "–"} / ${L ? fmt(L.exitFees) : "–"}</b></div>
-              <div className="kv"><span>Outstanding ERC-8113 series</span><b>{L?.outstanding.length ? L.outstanding.map((x) => `#${x}`).join(", ") : "none"}</b></div>
-              <div className="kv"><span>Strategy parameters</span><b>{L?.leverage}×, spot {L ? L.spotBps / 100 : "–"}%, drift ±{L ? L.driftBps / 100 : "–"}%, {L?.fundingHours ?? 0} funding hours</b></div>
+              <h3>Dealing and liquidity</h3>
+              <div className="kv"><span>Official NAV per unit (epoch {L?.navEpoch ?? "–"})</span><b>{L ? `${L.navUsd.toFixed(6)} USD / ${L.navEur.toFixed(6)} EUR` : "–"}</b></div>
+              <div className="kv"><span>Indicative NAV per unit now</span><b>{L && L.supply ? (L.fundAssets / L.supply).toFixed(6) : "–"} USD</b></div>
+              <div className="kv"><span>Fund assets (indicative) / units</span><b>${L ? fmt(L.fundAssets) : "–"} / {L ? fmt(L.supply, 4) : "–"}</b></div>
+              <div className="kv"><span>Open epoch / closes</span><b>{L ? `${L.epoch}, ${epochClosesIn > 0 ? `in ${Math.ceil(epochClosesIn / 60)} min` : "due now"}` : "–"}</b></div>
+              <div className="kv"><span>Last settled epoch</span><b className={L && L.lastSettled < L.epoch - 1 ? "bad" : ""}>{L ? L.lastSettled : "–"}{L && L.lastSettled < L.epoch - 1 ? " (waiting for NAV)" : ""}</b></div>
+              <div className="kv"><span>Subscriptions pending / redemption queue</span><b>${L ? fmt(L.pendingDeposits) : "–"} / {L ? fmt(L.queuedUnits, 2) : "–"} units</b></div>
+              <div className="kv"><span>Free cash in vault / reserved for claims</span><b>${L ? fmt(L.freeCash) : "–"} / ${L ? fmt(L.reserved) : "–"}</b></div>
+              <div className="kv"><span>Strategy buffer, now / target</span><b className={bufferNow < bufferTarget * 0.5 ? "bad" : ""}>${fmt(bufferNow)} / ${fmt(bufferTarget)}</b></div>
+              <div className="kv"><span>Anti-dilution levies retained</span><b>${L ? fmt(L.levies) : "–"}</b></div>
+              <div className="kv"><span>Strategy limits</span><b>{L ? `${L.maxLeverageBps / 1e4}x cap, buffer ${L.bufferBps / 100}%, band ±${L.bandBps / 100}%` : "–"}</b></div>
             </div>
             <div className="panel">
               <h3>Vault activity</h3>
@@ -402,7 +408,7 @@ export default function OpsApp() {
             <a href={explorer(ADDR.strategy)} target="_blank" rel="noreferrer">{short(ADDR.strategy)}</a>.{" "}
           </>
         )}
-        Milestone 1: positions are simulated in SimulatedStrategy and driven by real Hyperliquid ETH funding.
+        Testnet: positions are simulated by SimulatedHyperliquidAdapter and driven by real Hyperliquid ETH funding. Indicative only; the official NAV is the administrator's per epoch.
       </footer>
     </div>
   );

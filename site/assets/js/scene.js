@@ -28,7 +28,7 @@ const bounce = (x) => {
 };
 
 const BASE_PRICE = 2500;
-const SPOT_ETH = (10_000 * 0.9091) / BASE_PRICE; // ETH bought for a $10k deposit
+const SPOT_ETH = (10_000 * 0.7125) / BASE_PRICE; // ETH bought for $10k at 3x with a 5% buffer: (1 - 5%) / (1 + 1/3)
 const SEC_ITEMS = [9.35, 9.75, 10.15, 10.55, 10.95, 11.35]; // must match data-in on the security list
 
 // ---------------------------------------------------------------- camera keyframes
