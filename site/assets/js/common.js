@@ -3,6 +3,9 @@ import Lenis from "lenis";
 import { CONFIG } from "./config.js";
 import { guardLinks } from "./gate.js";
 
+// Set before first paint of the injected chrome so fund-only content never flashes.
+if (CONFIG.fundMarketing) document.documentElement.classList.add("fund-on");
+
 export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // The mark: a filigree delta inscribed in an open circle that touches all three corners.
@@ -32,7 +35,7 @@ function header(page) {
   <header class="site-header" id="site-header">
     <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
     <div class="header-actions">
-      <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.performanceUrl}">Performance</a>
+      <a class="btn btn-ghost btn-sm header-demo" data-fund-only href="${CONFIG.performanceUrl}">Performance</a>
       <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.demoUrl}">Launch demo</a>
       <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Open menu"><span></span><span></span></button>
     </div>
@@ -41,13 +44,13 @@ function header(page) {
     <nav>
       <a class="menu-link" href="./"${cur("home")}><small>01</small>How it works</a>
       <a class="menu-link" href="${CONFIG.demoUrl}"><small>02</small>Demo <span class="menu-tag">Testnet</span></a>
-      <a class="menu-link" href="${CONFIG.performanceUrl}"><small>03</small>Performance <span class="menu-tag">Backtest</span></a>
-      <a class="menu-link" href="investors.html"${cur("investors")}><small>04</small>Investors ${ARROW}</a>
-      <a class="menu-link" href="team.html"${cur("team")}><small>05</small>Team</a>
+      <a class="menu-link" data-fund-only href="${CONFIG.performanceUrl}"><small>03</small>Performance <span class="menu-tag">Backtest</span></a>
+      <a class="menu-link" href="investors.html"${cur("investors")}><small>0${CONFIG.fundMarketing ? 4 : 3}</small>Investors ${ARROW}</a>
+      <a class="menu-link" href="team.html"${cur("team")}><small>0${CONFIG.fundMarketing ? 5 : 4}</small>Team</a>
     </nav>
     <aside>
       ${logoSvg("mark-lg", true)}
-      <p>MidenDelta runs institutional strategies as a regulated fund with on-chain units. Vault 01 is a delta-neutral ETH cash and carry for professional investors.</p>
+      <p>MidenDelta is building institutional strategies as a fund with on-chain units. Vault 01, a delta-neutral ETH cash and carry for professional investors, is in preparation.</p>
     </aside>
   </div>`;
 }
@@ -59,19 +62,20 @@ function footer() {
     <div class="footer-grid">
       <div>
         <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
-        <p style="margin-top:14px;max-width:38ch">The next-gen hedge fund: regulated execution with on-chain units and on-chain execution.</p>
+        <p style="margin-top:14px;max-width:38ch">The next-gen hedge fund: built for regulated funds, with on-chain units and on-chain execution.</p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><a href="./">How it works</a></li>
         <li><a href="${CONFIG.demoUrl}">Testnet demo</a></li>
-        <li><a href="${CONFIG.performanceUrl}">Performance</a></li>
+        <li data-fund-only><a href="${CONFIG.performanceUrl}">Performance</a></li>
         <li><a href="team.html">Team</a></li>
       </ul></div>
       <div><h4>Invest</h4><ul>
-        <li><a href="investors.html#vault">Vault 01 waitlist</a></li>
+        <li><a href="investors.html#vault">${CONFIG.fundMarketing ? "Vault 01 waitlist" : "Vault 01 interest list"}</a></li>
         <li><a href="investors.html#seed">Seed round</a></li>
       </ul></div>
     </div>
+    <p class="legal-links"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><span>No cookies, no tracking.</span></p>
     <p class="disclaimer">© ${y} MidenDelta. MidenDelta Fund is an alternative investment fund in formation in Liechtenstein, to be managed by a licensed AIFM. Fund units are available only to professional and semi-professional investors, and not to US persons. Nothing on this website is an offer to sell, or a solicitation of an offer to buy, fund units; any offering will be made only under the fund's offering documents. Vault 01 currently runs as a testnet prototype on HyperEVM and its smart contracts have not yet been audited. The strategy involves risk, including loss of capital: returns vary and can be negative, and a delta-neutral position remains exposed to funding-rate, basis, execution, venue and smart-contract risk. Past or simulated performance is not a reliable indicator of future results.</p>
   </footer>`;
 }
@@ -81,6 +85,8 @@ export let lenis = null;
 export function initChrome(page) {
   document.body.insertAdjacentHTML("afterbegin", header(page));
   document.body.insertAdjacentHTML("beforeend", footer());
+  // Pre-AIFM mode: remove fund-only content (not just hide it) so hidden required fields can't block forms.
+  if (!CONFIG.fundMarketing) document.querySelectorAll("[data-fund-only]").forEach((el) => el.remove());
   document.querySelectorAll("[data-logo]").forEach((el) => (el.innerHTML = logoSvg("mark-lg", true)));
 
   const root = document.documentElement;

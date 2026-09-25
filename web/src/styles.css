@@ -124,3 +124,9 @@ section { padding: 88px 0; }
 .toast { position: fixed; right: 20px; bottom: 20px; z-index: 50; max-width: 380px; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.legal-foot { border-top: 1px solid var(--line, rgba(255,255,255,.12)); margin-top: 64px; padding: 28px 0 40px; font-size: 13px; }
+.legal-foot .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.legal-foot a { color: inherit; opacity: .8; text-decoration: none; }
+.legal-foot a:hover { opacity: 1; }
+.legal-foot span { opacity: .5; }

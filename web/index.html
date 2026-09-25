@@ -6,8 +6,6 @@
     <title>MidenDelta: Testnet demo</title>
     <meta name="description" content="Institutional investment strategies wrapped as liquid vault tokens. Decentralized, accessible, on-chain." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Ccircle r='44' fill='none' stroke='%238fa5cc' stroke-width='6'/%3E%3Cpath d='M0,-44 L38.105,22 L-38.105,22 Z' fill='none' stroke='%238fa5cc' stroke-width='7' stroke-linejoin='miter'/%3E%3C/svg%3E" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
@@ -15,6 +13,10 @@
       <!-- md-gate-loader: the marketing site's eligibility gate (served next to /demo/ on the live site) -->
     <script>
       (function () {
+        var f = document.createElement("link");
+        f.rel = "stylesheet";
+        f.href = "../assets/css/fonts.css"; // self-hosted Geist from the marketing site
+        document.head.appendChild(f);
         var s = document.createElement("script");
         s.type = "module";
         s.textContent = 'import("../assets/js/gate.js").then(function (m) { m.requirePageGate({ home: "../" }); }).catch(function () {});';

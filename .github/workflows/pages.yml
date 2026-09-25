@@ -26,7 +26,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp -R site/index.html site/investors.html site/team.html site/performance.html site/assets _site/
+          cp -R site/index.html site/investors.html site/team.html site/performance.html site/impressum.html site/datenschutz.html site/assets _site/
           mkdir -p _site/demo
           cp -R web/dist/. _site/demo/
       - uses: actions/upload-pages-artifact@v3

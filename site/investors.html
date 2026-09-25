@@ -4,14 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Investor Access · MidenDelta</title>
-  <meta name="description" content="Priority access to MidenDelta Vault 01, hard-capped at $10M, and inquiries for the MidenDelta seed round." />
+  <meta name="description" content="Register your interest in MidenDelta Vault 01, and inquiries for the MidenDelta seed round." />
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Ccircle r='44' fill='none' stroke='%23a0a0a0' stroke-width='6'/%3E%3Cpath d='M0,-44 L38.105,22 L-38.105,22 Z' fill='none' stroke='%23a0a0a0' stroke-width='7' stroke-linejoin='miter'/%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
   <link rel="stylesheet" href="assets/css/site.css" />
-  <script type="importmap">{ "imports": { "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/+esm" } }</script>
+  <script type="importmap">{ "imports": { "lenis": "./assets/vendor/lenis.mjs" } }</script>
 </head>
 <body>
 <main id="main">
@@ -19,9 +17,10 @@
     <div class="wrap" style="position:relative">
       <span class="eyebrow reveal">Investor access</span>
       <h1 class="reveal" data-delay="1">Capacity is the constraint.</h1>
-      <p class="reveal" data-delay="2">We are not running a broad raise. Vault 01 is hard-capped at $10M for its proof of concept and open only to professional and semi-professional investors, and our seed round is allocated mostly through existing relationships. If you'd like to be considered, there are two ways in.</p>
+      <p class="reveal" data-delay="2" data-pre-only>Vault 01 is in preparation and not yet open for subscriptions. Once the fund is authorised it will be open only to professional and semi-professional investors, and our seed round is allocated mostly through existing relationships. If you'd like to stay close, there are two ways in.</p>
+      <p class="reveal" data-delay="2" data-fund-only>We are not running a broad raise. Vault 01 is hard-capped at $10M for its proof of concept and open only to professional and semi-professional investors, and our seed round is allocated mostly through existing relationships. If you'd like to be considered, there are two ways in.</p>
       <div class="status-strip reveal" data-delay="3">
-        <span class="status-pill"><span class="dot ok"></span>Vault 01 waitlist open</span>
+        <span class="status-pill" data-fund-only><span class="dot ok"></span>Vault 01 waitlist open</span><span class="status-pill" data-pre-only><span class="dot ok"></span>Vault 01 interest list open</span>
         <span class="status-pill"><span class="dot"></span>Seed round by introduction</span>
         <span class="status-pill">Professional investors only</span>
       </div>
@@ -35,9 +34,16 @@
           <span class="eyebrow">For allocators</span>
           <span class="status-pill"><span class="dot ok"></span>Open</span>
         </div>
-        <h2>Vault 01 waitlist</h2>
-        <p>Reserve priority access to the ETH cash and carry fund before dealing opens. Capacity is capped, and allocations are offered in waitlist order after onboarding with the fund administrator.</p>
-        <ul class="perks">
+        <h2 data-fund-only>Vault 01 waitlist</h2>
+        <h2 data-pre-only>Vault 01 interest list</h2>
+        <p data-pre-only>Vault 01 is not yet open for subscriptions. Leave your details and we'll contact you once the fund is authorised and its offering documents are available. Registering is not an offer and commits you to nothing.</p>
+        <ul class="perks" data-pre-only>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Updates on the fund's authorisation and launch</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Direct line to the founders</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Try the dealing flow on the testnet demo today</span></li>
+        </ul>
+        <p data-fund-only>Reserve priority access to the ETH cash and carry fund before dealing opens. Capacity is capped, and allocations are offered in waitlist order after onboarding with the fund administrator.</p>
+        <ul class="perks" data-fund-only>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span><strong>0% performance fee in year one</strong> for founding investors in the first $10M, subject to the final fund documents</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Priority allocation before the $10M proof-of-concept cap fills</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><span>Subscribe in USDC, redeem daily at NAV. Semi-professional minimum €200,000</span></li>
@@ -50,7 +56,7 @@
               <div class="field"><label for="v-email">Email</label><input id="v-email" name="email" type="email" autocomplete="email" inputmode="email" required /><span class="err" role="alert"></span></div>
             </div>
             <div class="row">
-              <div class="field"><label for="v-size">Intended allocation</label>
+              <div class="field" data-fund-only><label for="v-size">Intended allocation</label>
                 <select id="v-size" name="allocation" required>
                   <option value="">Select a range</option>
                   <option>Under €200k (professional investors only)</option><option>€200k – €500k</option><option>€500k – €1M</option><option>€1M – €5M</option><option>€5M +</option>
@@ -69,14 +75,14 @@
                 </select><span class="err" role="alert"></span></div>
               <div class="field"><label for="v-country">Country of residence <span class="hint">(US persons are not eligible)</span></label><input id="v-country" name="country" autocomplete="country-name" required /><span class="err" role="alert"></span></div>
             </div>
-            <label class="check"><input type="checkbox" name="eligible" required /><span>I confirm I am a professional investor, or a semi-professional investor investing at least €200,000, and not a US person. I understand this waitlist is not an offer or a commitment to invest.</span></label>
+            <label class="check"><input type="checkbox" name="eligible" required /><span>I confirm I am a professional investor, or a semi-professional investor investing at least €200,000, and not a US person. I understand this list is not an offer or a commitment to invest.</span></label>
             <span class="err" data-for="eligible" role="alert"></span>
-            <button class="btn btn-primary submit" type="submit">Request allocation
+            <button class="btn btn-primary submit" type="submit"><span data-fund-only>Request allocation</span><span data-pre-only>Register interest</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           </form>
           <div class="form-success" role="status" tabindex="-1">
             <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>You're on the list.</h3>
-            <p>We'll reach out in waitlist order to start onboarding with the fund administrator. Meanwhile, you can try the dealing flow on testnet.</p>
+            <p data-fund-only>We'll reach out in waitlist order to start onboarding with the fund administrator. Meanwhile, you can try the dealing flow on testnet.</p><p data-pre-only>We'll let you know once the fund is authorised. Meanwhile, you can try the dealing flow on testnet.</p>
           </div>
         </div>
       </article>
@@ -123,7 +129,7 @@
     </div>
   </section>
 
-  <section class="section" style="padding-top:0" id="terms">
+  <section data-fund-only class="section" style="padding-top:0" id="terms">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Vault 01 terms</span>
@@ -152,8 +158,8 @@
         <details><summary>How does dealing work?</summary><p>You request a subscription in USDC or a redemption in units at any time. At the daily cutoff the dealing period closes, the administrator strikes the NAV, and requests settle at that NAV. You then claim your units or USDC. There is no instant mint or redeem.</p></details>
         <details><summary>Where does the return come from?</summary><p>Mainly from perpetual-futures funding. When the market is net long, longs pay shorts, and the fund holds the short leg. Spot ETH offsets the price exposure. Funding rates vary and can turn negative, which is the main source of return variance. Returns can be negative.</p></details>
         <details><summary>What if many investors redeem at once?</summary><p>If net redemptions on a dealing day exceed 15% of NAV, every request is filled by the same percentage and the rest rolls to the next dealing day with no priority. Net outflows pay an anti-dilution levy that stays in the fund for the remaining investors.</p></details>
-        <details><summary>How are fees charged?</summary><p>There is no management fee. A 19.5% performance fee applies only to gains above the high-water mark, calculated by the fund administrator. Fund costs such as administration, depositary and audit are charged to the fund. Founding investors in the first $10M pay no performance fee in year one, subject to the final fund documents.</p></details>
-        <details><summary>Who controls the fund?</summary><p>The strategy runs on-chain and is supervised by a licensed Liechtenstein AIFM. The AIFM sets the limits the strategy runs within, owns risk management and valuation oversight, holds the admin keys through a multisig and timelock, and decides when to resume after a circuit breaker. A depositary oversees the assets. MidenDelta builds and operates the strategy under the AIFM's mandate; its execution keeper cannot withdraw assets or change limits. Over time, MidenDelta plans to obtain its own AIFM licence in Liechtenstein and manage the funds directly.</p></details>
+        <details data-fund-only><summary>How are fees charged?</summary><p>There is no management fee. A 19.5% performance fee applies only to gains above the high-water mark, calculated by the fund administrator. Fund costs such as administration, depositary and audit are charged to the fund. Founding investors in the first $10M pay no performance fee in year one, subject to the final fund documents.</p></details>
+        <details><summary>Who controls the fund?</summary><p>The strategy runs on-chain and will be supervised by a licensed Liechtenstein AIFM. The AIFM sets the limits the strategy runs within, owns risk management and valuation oversight, holds the admin keys through a multisig and timelock, and decides when to resume after a circuit breaker. A depositary oversees the assets. MidenDelta builds and operates the strategy under the AIFM's mandate; its execution keeper cannot withdraw assets or change limits. Over time, MidenDelta plans to obtain its own AIFM licence in Liechtenstein and manage the funds directly.</p></details>
         <details><summary>Is it audited?</summary><p>Not yet. Vault 01 runs today as a testnet prototype. Before mainnet we will complete formal verification, a tier-1 audit and a full legal review with the fund manager.</p></details>
       </div>
     </div>

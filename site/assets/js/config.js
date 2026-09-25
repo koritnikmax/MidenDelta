@@ -14,6 +14,11 @@ export const CONFIG = {
   // Fallback inbox for the investor forms when no endpoint is set. Leave empty while previewing.
   contactEmail: "",
 
+  // Pre-AIFM mode. Keep false until the fund is authorised and an AIFM has notified BaFin for marketing
+  // (KAGB §§ 306b, 321/323): hides fund terms, fees, allocation sizes and the backtest. Elements marked
+  // data-fund-only appear only when true; elements marked data-pre-only appear only when false.
+  fundMarketing: false,
+
   // Vault 01 terms shown across the site.
   vault: {
     capUsd: 10_000_000,

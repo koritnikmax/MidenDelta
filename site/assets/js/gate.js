@@ -2,8 +2,10 @@
 // It is not a geo-block; blocking US visitors at the network level needs hosting that supports it.
 // Self-contained (own styles) so the performance page and the demo app can use it too.
 
-const KEY = "md-eligibility-v1";
-const VALID_DAYS = 30;
+// Nothing is stored on the visitor's device (no cookies, no localStorage; § 25 TDDDG). The answer lives in memory
+// for this page only and is handed to the next gated page as "?e=1", which that page removes from the address bar.
+const PARAM = "e";
+let passed = false;
 
 const COUNTRIES = [
   ["DE", "Germany"], ["AT", "Austria"], ["CH", "Switzerland"], ["LI", "Liechtenstein"], ["LU", "Luxembourg"],
@@ -12,20 +14,23 @@ const COUNTRIES = [
 ];
 
 export function isEligible() {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) || "null");
-    return !!(v && v.ok && Date.now() - v.at < VALID_DAYS * 86_400_000);
-  } catch {
-    return false;
-  }
+  return passed;
 }
 
-function remember(country, category) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify({ ok: true, country, category, at: Date.now() }));
-  } catch {
-    /* storage blocked: the visitor will be asked again next time */
-  }
+/** The URL with the pass-through flag added. */
+function withPass(href) {
+  const u = new URL(href, location.href);
+  u.searchParams.set(PARAM, "1");
+  return u.href;
+}
+
+/** Take the flag from the address bar (set by a gated link on the previous page) and remove it. */
+function consumePass() {
+  const u = new URL(location.href);
+  if (u.searchParams.get(PARAM) !== "1") return false;
+  u.searchParams.delete(PARAM);
+  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+  return true;
 }
 
 const CSS = `
@@ -85,7 +90,7 @@ export function openGate({ onPass, onCancel }) {
         <label class="opt"><input type="radio" name="cat" value="semi" /><span>Semi-professional investor<small>Investing at least €200,000, with the experience to assess the risks</small></span></label>
         <label class="opt"><input type="radio" name="cat" value="none" /><span>Neither of these</span></label>
       </fieldset>
-      <label class="ack"><input type="checkbox" id="md-gate-ack" /><span>I confirm this is accurate and that I am not a US person.</span></label>
+      <label class="ack"><input type="checkbox" id="md-gate-ack" /><span>I confirm this is accurate and that I am not a US person. Nothing is saved; you'll be asked again on your next visit.</span></label>
       <div class="row">
         <button type="submit" class="go" disabled>Continue</button>
         <button type="button" class="back">Go back</button>
@@ -128,7 +133,7 @@ export function openGate({ onPass, onCancel }) {
       el.querySelector(".back").focus();
       return;
     }
-    remember(country.value, cat());
+    passed = true;
     close();
     onPass();
   });
@@ -137,7 +142,8 @@ export function openGate({ onPass, onCancel }) {
 
 /** Blur the current page until the visitor has passed the gate. */
 export function requirePageGate({ home = "./" } = {}) {
-  if (isEligible()) return;
+  if (consumePass()) passed = true;
+  if (passed) return;
   const start = () => {
     document.body.classList.add("md-gated");
     openGate({
@@ -153,9 +159,11 @@ export function requirePageGate({ home = "./" } = {}) {
 export function guardLinks(isGated) {
   document.addEventListener("click", (e) => {
     const a = e.target.closest?.("a[href]");
-    if (!a || isEligible() || !isGated(new URL(a.href, location.href))) return;
+    if (!a || !isGated(new URL(a.href, location.href))) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    openGate({ onPass: () => (location.href = a.href), onCancel: () => {} });
+    const go = () => (a.target === "_blank" ? open(withPass(a.href), "_blank", "noopener") : (location.href = withPass(a.href)));
+    if (passed) go();
+    else openGate({ onPass: go, onCancel: () => {} });
   }, true);
 }

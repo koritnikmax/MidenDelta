@@ -141,6 +141,13 @@ export default function App() {
       </nav>
       <Hero />
       <VaultApp />
+      <footer className="legal-foot">
+        <div className="wrap">
+          <a href="../impressum.html">Impressum</a>
+          <a href="../datenschutz.html">Datenschutz</a>
+          <span>Test tokens only, no monetary value. No cookies, nothing stored in your browser.</span>
+        </div>
+      </footer>
     </>
   );
 }

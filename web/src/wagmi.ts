@@ -17,6 +17,7 @@ export const hyperEvmTestnet = defineChain({
 export const config = createConfig({
   chains: [hyperEvmTestnet],
   connectors: [injected()],
+  storage: null, // nothing persisted in the visitor's browser (§ 25 TDDDG); the wallet reconnects on each visit
   transports: { [hyperEvmTestnet.id]: http(RPC) },
 });
 

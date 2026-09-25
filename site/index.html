@@ -4,22 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MidenDelta: The next-gen hedge fund</title>
-  <meta name="description" content="MidenDelta runs institutional strategies as a regulated fund with on-chain units. Vault 01: a delta-neutral ETH cash and carry for professional and semi-professional investors." />
+  <meta name="description" content="MidenDelta is building institutional strategies as a fund with on-chain units. Vault 01, a delta-neutral ETH cash and carry for professional and semi-professional investors, is in preparation." />
   <meta name="theme-color" content="#000000" />
   <meta property="og:title" content="MidenDelta: The next-gen hedge fund" />
-  <meta property="og:description" content="Regulated execution with on-chain units and on-chain execution. Vault 01: delta-neutral ETH cash and carry." />
+  <meta property="og:description" content="Built for regulated funds, with on-chain units and on-chain execution. Vault 01: delta-neutral ETH cash and carry, in preparation." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Ccircle r='44' fill='none' stroke='%23a0a0a0' stroke-width='6'/%3E%3Cpath d='M0,-44 L38.105,22 L-38.105,22 Z' fill='none' stroke='%23a0a0a0' stroke-width='7' stroke-linejoin='miter'/%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
   <link rel="stylesheet" href="assets/css/site.css" />
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-      "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/+esm"
+      "three": "./assets/vendor/three.module.min.js",
+      "lenis": "./assets/vendor/lenis.mjs"
     }
   }
   </script>
@@ -35,8 +31,8 @@
       <div class="steps">
         <div class="step step-hero" data-in="-1" data-out="0.45">
           <h1>The next-gen hedge fund</h1>
-          <p class="hero-claim">Regulated execution with on-chain units and on-chain execution.</p>
-          <p>MidenDelta runs institutional trading strategies as a regulated fund whose units live on-chain. Vault 01 is a delta-neutral ETH cash and carry for professional and semi-professional investors.</p>
+          <p class="hero-claim">Built for regulated funds, with on-chain units and on-chain execution.</p>
+          <p>MidenDelta is building institutional trading strategies as a fund whose units live on-chain. Vault 01, a delta-neutral ETH cash and carry for professional and semi-professional investors, is in preparation and runs on testnet today.</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="#structure">How the fund is set up</a>
             <a class="btn btn-ghost" href="investors.html">Investor access</a>
@@ -112,7 +108,7 @@
           </div>
           <ol class="sec-list">
             <li data-in="9.35" data-out="99" data-blur><span class="n">01</span><h3>Delta-neutral, leverage capped at 3×</h3><p>Spot and short are sized equally. A keeper re-hedges when delta drifts and tops up margin from a 5% buffer.</p></li>
-            <li data-in="9.75" data-out="99" data-blur><span class="n">02</span><h3>Supervised by a licensed AIFM</h3><p>The strategy runs on-chain; a licensed Liechtenstein fund manager sets its limits, owns risk and holds the kill switch.</p></li>
+            <li data-in="9.75" data-out="99" data-blur><span class="n">02</span><h3>To be supervised by a licensed AIFM</h3><p>The strategy runs on-chain; a licensed Liechtenstein fund manager will set its limits, own risk and hold the kill switch.</p></li>
             <li data-in="10.15" data-out="99" data-blur><span class="n">03</span><h3>Permissioned units</h3><p>ERC-3643 units that only KYC-verified professional and semi-professional investors can hold. No US persons.</p></li>
             <li data-in="10.55" data-out="99" data-blur><span class="n">04</span><h3>Controlled keys and breakers</h3><p>Admin changes go through the manager's multisig and a timelock. The keeper executes but can't withdraw, and circuit breakers pause the fund.</p></li>
             <li data-in="10.95" data-out="99" data-blur><span class="n">05</span><h3>Orderly dealing</h3><p>Daily dealing at NAV, a redemption gate with pro-rata fills, and an anti-dilution levy that stays in the fund.</p></li>
@@ -131,12 +127,12 @@
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Structure</span>
-        <h2>On-chain strategy, supervised by an AIFM.</h2>
-        <p>Vault 01 is being set up as a Liechtenstein alternative investment fund. The strategy runs on-chain, and a licensed fund manager (AIFM) supervises it: it sets the limits, owns risk management and answers to the regulator. The smart contracts enforce who can do what. Over time, MidenDelta plans to obtain its own AIFM licence in Liechtenstein.</p>
+        <h2>On-chain strategy, to be supervised by an AIFM.</h2>
+        <p>Vault 01 is being set up as a Liechtenstein alternative investment fund. The strategy runs on-chain, and a licensed fund manager (AIFM) will supervise it: it sets the limits, owns risk management and answers to the regulator. The smart contracts enforce who can do what. Over time, MidenDelta plans to obtain its own AIFM licence in Liechtenstein.</p>
       </div>
       <dl class="terms three reveal" data-delay="1">
         <div class="term"><dt>Fund</dt><dd>Liechtenstein AIF<small>In formation. Fund units are ERC-3643 tokens on HyperEVM.</small></dd></div>
-        <div class="term"><dt>Fund manager</dt><dd>Licensed AIFM<small>Supervises the on-chain strategy: sets its limits, runs risk management, holds the admin and kill-switch keys.</small></dd></div>
+        <div class="term"><dt>Fund manager</dt><dd>Licensed AIFM<small>To be appointed. Supervises the on-chain strategy: sets its limits, runs risk management, holds the admin and kill-switch keys.</small></dd></div>
         <div class="term"><dt>Depositary</dt><dd>Bank depositary<small>Oversees the fund's assets and co-signs movements out of the strategy.</small></dd></div>
         <div class="term"><dt>Administrator</dt><dd>NAV and register<small>Strikes the NAV each dealing day, keeps the investor register, runs KYC.</small></dd></div>
         <div class="term"><dt>Venue</dt><dd>Hyperliquid<small>Spot ETH and the perp short both run on Hyperliquid today. More venues later to spread platform risk.</small></dd></div>
@@ -153,7 +149,7 @@
         <p>Each strategy gets its own vault and share class with its own risk profile, so allocators can build a portfolio from on-chain building blocks.</p>
       </div>
       <div class="roadmap">
-        <article class="road reveal" data-delay="1"><span class="status live">Testnet live</span><span class="idx">VAULT 01</span><h3>ETH Cash &amp; Carry</h3><p>Delta-neutral funding capture on Hyperliquid. Capped at $10M for the proof of concept.</p></article>
+        <article class="road reveal" data-delay="1"><span class="status live">Testnet live</span><span class="idx">VAULT 01</span><h3>ETH Cash &amp; Carry</h3><p>Delta-neutral funding capture on Hyperliquid, starting as a capacity-capped proof of concept.</p></article>
         <article class="road reveal locked" data-delay="2"><span class="status">In research</span><span class="idx">VAULT 02</span><h3>Next strategy</h3><p>More hedge fund strategies, each in its own vault and share class.</p></article>
         <article class="road reveal locked" data-delay="3"><span class="status">Planned</span><span class="idx">INDEX</span><h3>Multi-strategy</h3><p>A single token allocating across MidenDelta vaults.</p></article>
         <article class="road reveal locked" data-delay="3"><span class="status">Planned</span><span class="idx">LICENCE</span><h3>Own AIFM licence</h3><p>Obtain our own AIFM licence in Liechtenstein and manage the MidenDelta funds directly.</p></article>
@@ -164,7 +160,17 @@
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div class="cta-band reveal">
-        <div>
+        <div data-pre-only>
+          <span class="eyebrow">In preparation</span>
+          <h2>Follow the launch.</h2>
+          <p>Vault 01 is not yet open for subscriptions. It will open to professional and semi-professional investors once the fund is authorised and its offering documents are available. Register your interest and we'll keep you posted.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="investors.html#vault">Register interest
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="btn btn-ghost" data-demo href="demo/">Try the testnet demo</a>
+          </div>
+        </div>
+        <div data-fund-only>
           <span class="eyebrow">Limited capacity</span>
           <h2>The first $10M is capped.</h2>
           <p>Vault 01 opens with a hard $10M proof-of-concept cap for professional and semi-professional investors. Founding investors pay <strong>no performance fee in year one</strong>, subject to the final fund documents. Allocation follows the waitlist.</p>

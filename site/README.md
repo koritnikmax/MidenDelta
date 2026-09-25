@@ -1,15 +1,17 @@
 # MidenDelta marketing site
 
-Static site with no build step. Three.js and Lenis load from jsDelivr through an import map.
+Static site with no build step. Everything is self-hosted (no CDN, no Google Fonts): three.js, Lenis and Chart.js in
+`assets/vendor/`, Geist fonts in `assets/fonts/` (SIL OFL). No cookies and nothing in browser storage.
 
 ```
 index.html       scroll story: subscribe → issue → inside the fund → delta 0 → carry → security; fund structure
 investors.html   eligibility-gated: Vault 01 terms, waitlist, seed inquiries, FAQ
 team.html        founders (edit assets/js/team.js, photos in assets/team/)
-performance.html eligibility-gated backtest at the 3x leverage cap
+performance.html eligibility-gated backtest at the 3x leverage cap (placeholder while fundMarketing is false)
+impressum.html, datenschutz.html   legal notice and privacy policy (German)
 assets/js/scene.js   the 3D scene; everything is driven by story time t (0 → 12)
-assets/js/config.js  demo URL, form endpoint, contact email, vault terms
-assets/js/gate.js    self-declaration gate (country + investor category) before fund details; not a geo-block
+assets/js/config.js  demo URL, form endpoint, vault terms, fundMarketing (pre-AIFM mode switch)
+assets/js/gate.js    self-declaration gate (country + investor category) before fund details; stores nothing, not a geo-block
 ```
 
 Preview locally:
