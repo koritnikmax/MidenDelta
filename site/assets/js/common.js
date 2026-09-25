@@ -35,7 +35,7 @@ function header(page) {
   <header class="site-header" id="site-header">
     <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
     <div class="header-actions">
-      <a class="btn btn-ghost btn-sm header-demo" data-fund-only href="${CONFIG.performanceUrl}">Performance</a>
+      <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.performanceUrl}">Performance</a>
       <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.demoUrl}">Launch demo</a>
       <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Open menu"><span></span><span></span></button>
     </div>
@@ -44,9 +44,9 @@ function header(page) {
     <nav>
       <a class="menu-link" href="./"${cur("home")}><small>01</small>How it works</a>
       <a class="menu-link" href="${CONFIG.demoUrl}"><small>02</small>Demo <span class="menu-tag">Testnet</span></a>
-      <a class="menu-link" data-fund-only href="${CONFIG.performanceUrl}"><small>03</small>Performance <span class="menu-tag">Backtest</span></a>
-      <a class="menu-link" href="investors.html"${cur("investors")}><small>0${CONFIG.fundMarketing ? 4 : 3}</small>Investors ${ARROW}</a>
-      <a class="menu-link" href="team.html"${cur("team")}><small>0${CONFIG.fundMarketing ? 5 : 4}</small>Team</a>
+      <a class="menu-link" href="${CONFIG.performanceUrl}"><small>03</small>Performance <span class="menu-tag">Simulated</span></a>
+      <a class="menu-link" href="investors.html"${cur("investors")}><small>04</small>Investors ${ARROW}</a>
+      <a class="menu-link" href="team.html"${cur("team")}><small>05</small>Team</a>
     </nav>
     <aside>
       ${logoSvg("mark-lg", true)}
@@ -67,7 +67,7 @@ function footer() {
       <div><h4>Explore</h4><ul>
         <li><a href="./">How it works</a></li>
         <li><a href="${CONFIG.demoUrl}">Testnet demo</a></li>
-        <li data-fund-only><a href="${CONFIG.performanceUrl}">Performance</a></li>
+        <li><a href="${CONFIG.performanceUrl}">Performance (simulated)</a></li>
         <li><a href="team.html">Team</a></li>
       </ul></div>
       <div><h4>Invest</h4><ul>
@@ -119,7 +119,7 @@ export function initChrome(page) {
   }
 
   // fund details sit behind the eligibility self-declaration
-  guardLinks((u) => u.origin === location.origin && (/(investors|performance)\.html$/.test(u.pathname) || /\/demo\/?/.test(u.pathname)));
+  guardLinks((u) => u.origin === location.origin && (/investors\.html$/.test(u.pathname) || /\/demo\/?/.test(u.pathname)));
 
   const hdr = document.getElementById("site-header");
   const onScroll = () => hdr.classList.toggle("scrolled", scrollY > 24);

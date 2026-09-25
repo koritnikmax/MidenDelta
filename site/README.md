@@ -7,7 +7,7 @@ Static site with no build step. Everything is self-hosted (no CDN, no Google Fon
 index.html       scroll story: subscribe → issue → inside the fund → delta 0 → carry → security; fund structure
 investors.html   eligibility-gated: Vault 01 terms, waitlist, seed inquiries, FAQ
 team.html        founders (edit assets/js/team.js, photos in assets/team/)
-performance.html eligibility-gated backtest at the 3x leverage cap (placeholder while fundMarketing is false)
+performance.html public strategy research: simulated ETH carry backtest at 3x (no fund terms or fees)
 impressum.html, datenschutz.html   legal notice and privacy policy (German)
 assets/js/scene.js   the 3D scene; everything is driven by story time t (0 → 12)
 assets/js/config.js  demo URL, form endpoint, vault terms, fundMarketing (pre-AIFM mode switch)

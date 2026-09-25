@@ -3,7 +3,7 @@ export const CONFIG = {
   // Where the testnet demo (the /web app) is served. The GitHub Pages workflow publishes it under /demo/.
   demoUrl: "demo/",
 
-  // Backtest report for Vault 01 (performance.html is the research note from MidenDelta-Carry-Backtest.html).
+  // Public strategy research: a simulated backtest of a generic ETH cash and carry, not fund performance.
   performanceUrl: "performance.html",
 
   // POST endpoint for the investor forms (e.g. a Formspree / Basin / Getform URL, or your own API).
@@ -15,7 +15,7 @@ export const CONFIG = {
   contactEmail: "",
 
   // Pre-AIFM mode. Keep false until the fund is authorised and an AIFM has notified BaFin for marketing
-  // (KAGB §§ 306b, 321/323): hides fund terms, fees, allocation sizes and the backtest. Elements marked
+  // (KAGB §§ 306b, 321/323): hides fund terms, fees and allocation sizes. Elements marked
   // data-fund-only appear only when true; elements marked data-pre-only appear only when false.
   fundMarketing: false,
 
