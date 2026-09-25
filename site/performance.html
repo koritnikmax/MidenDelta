@@ -36,13 +36,11 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .meta{font-family:var(--mono);font-size:12px;color:var(--ink2);display:flex;gap:18px;flex-wrap:wrap}
 .meta b{color:var(--ink);font-weight:500}
 
-.lede{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:48px;padding-block:44px 36px;align-items:end}
+.lede{display:block;padding-block:44px 36px;align-items:end}
 @media (max-width:860px){.lede{grid-template-columns:1fr;gap:24px;padding-block:32px 24px}}
 .eyebrow{font-size:14px;color:var(--ink3);margin:0}
 h1{font-family:var(--display);font-weight:500;font-size:clamp(34px,5.2vw,58px);line-height:1.02;letter-spacing:-.02em;margin:10px 0 16px;text-wrap:balance}
 .lede p{margin:0;color:var(--ink2);font-size:16.5px;max-width:58ch}
-.formula{font-family:var(--mono);font-size:13px;color:var(--ink2);border-left:1px solid var(--rule);padding:4px 0 4px 16px;line-height:1.9}
-.formula b{color:var(--ink);font-weight:500}
 
 /* method */
 section{padding-block:28px}
@@ -123,12 +121,6 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-si
       <h1>Three years of ETH funding, earned from the short side</h1>
       <p>Long spot ETH, short an equal amount of ETH perpetuals on Hyperliquid, and collect the funding that longs pay shorts every hour. This page shows what that position would have earned from May 2023 to September 2026, computed from Hyperliquid's public funding history.</p>
     </div>
-    <div class="formula">
-      <b>Effective APR</b> = mean daily funding × 365 × 10⁄11<br>
-      <b>Capital</b> 90.91% spot, 9.09% margin<br>
-      <b>Hedge</b> 10× short perpetual<br>
-      <b>Borrow fee</b> 0% on Hyperliquid
-    </div>
   </div>
 
   <section id="method" aria-labelledby="h-method">
@@ -136,7 +128,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-si
     <div class="method">
       <ol class="steps">
         <li><div><b>Pulled every ETH funding payment</b> <span>from the <a href="https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals" rel="noopener">Hyperliquid public API</a>, back to the first ETH record on 12 May 2023.</span></div></li>
-        <li><div><b>Aggregated 28,668 payments into 1,219 daily rates.</b> <span>Funding settled every 8 hours until 7 Jun 2023 and hourly from 8 Jun 2023.</span></div></li>
+        <li><div><b>Aggregated 28,668 payments into 1,219 daily rates.</b> <span>Hyperliquid paid funding every 8 hours in the first weeks of data (until 7 June 2023) and every hour since 8 June 2023.</span></div></li>
         <li><div><b>Took the short's view.</b> <span>A positive rate means longs pay shorts, so it is income for this position. Negative days count as losses.</span></div></li>
         <li><div><b>Annualised without compounding</b> <span>and scaled to the 90.91% of capital that a 10× short hedge leaves deployed.</span></div></li>
       </ol>
@@ -144,7 +136,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-si
         <dt>Source</dt><dd>Hyperliquid API, <code>fundingHistory</code>, ETH</dd>
         <dt>Window</dt><dd class="num">12 May 2023 to 11 Sep 2026</dd>
         <dt>Payments</dt><dd class="num">28,668, grouped into 1,219 days</dd>
-        <dt>Leverage</dt><dd>10× short, 90.91% of capital deployed</dd>
+        <dt>Leverage</dt><dd>10× short, 0.91× capital efficiency</dd>
         <dt>Risk-free rate</dt><dd>4.5% (US Treasury), used for Sharpe</dd>
         <dt>Not included</dt><dd>Trading fees, rebalancing, slippage, basis moves, performance fee</dd>
       </dl>
