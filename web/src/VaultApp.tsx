@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAccount, useChainId, useSwitchChain, useWriteContract, usePublicClient } from "wagmi";
+import { useAccount, useBalance, useSwitchChain, useWriteContract, usePublicClient } from "wagmi";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
 import { vaultAbi, usdcAbi, onboardingAbi } from "./abi";
 import { ADDR, hyperEvmTestnet, explorer } from "./wagmi";
@@ -42,8 +42,10 @@ export default function VaultApp() {
   const [status, setStatus] = useState<Status>(null);
   const [busy, setBusy] = useState(false);
 
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
+  // the chain the wallet is actually on (useChainId only reports configured chains, so it can miss mainnet)
+  const { isConnected, address, chainId: walletChainId } = useAccount();
+  const { data: gas } = useBalance({ address, chainId: hyperEvmTestnet.id, query: { enabled: !!address, refetchInterval: 8000 } });
+  const noGas = isConnected && gas !== undefined && gas.value === 0n;
   const { connectWallet, isPending: connecting, error: walletError } = useWallet();
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -52,7 +54,7 @@ export default function VaultApp() {
   const me = useInvestorState();
   const now = useNow();
 
-  const wrongChain = isConnected && chainId !== hyperEvmTestnet.id;
+  const wrongChain = isConnected && walletChainId !== hyperEvmTestnet.id;
   const decimals = tab === "subscribe" ? 6 : 18;
   let parsed = 0n;
   try {
@@ -77,24 +79,30 @@ export default function VaultApp() {
       me.refetch();
       return true;
     } catch (e: any) {
-      setStatus({ kind: "err", msg: e?.shortMessage ?? e?.message ?? String(e) });
+      const msg: string = e?.shortMessage ?? e?.message ?? String(e);
+      setStatus({
+        kind: "err",
+        msg: /timed out|insufficient funds/i.test(msg)
+          ? "HyperEVM testnet didn't pick up the transaction. Check that this wallet has testnet HYPE for gas, then try again."
+          : msg,
+      });
       return false;
     } finally {
       setBusy(false);
     }
   }
 
-  const faucet = () => run("Get 10,000 test USDC", () => writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "faucet" }));
-  const register = () => run("Register as test investor", () => writeContractAsync({ address: ADDR.onboarding, abi: onboardingAbi, functionName: "registerMe", args: [country] }));
+  const faucet = () => run("Get 10,000 test USDC", () => writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.usdc, abi: usdcAbi, functionName: "faucet" }));
+  const register = () => run("Register as test investor", () => writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.onboarding, abi: onboardingAbi, functionName: "registerMe", args: [country] }));
 
   async function requestSubscription() {
     if (!me.address) return;
     if ((me.allowance ?? 0n) < parsed) {
-      const ok = await run("Approve USDC", () => writeContractAsync({ address: ADDR.usdc, abi: usdcAbi, functionName: "approve", args: [ADDR.vault, maxUint256] }));
+      const ok = await run("Approve USDC", () => writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.usdc, abi: usdcAbi, functionName: "approve", args: [ADDR.vault, maxUint256] }));
       if (!ok) return;
     }
     const ok = await run(`Request subscription of ${fmtUsd(parsed)} USDC`, () =>
-      writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "requestDeposit", args: [parsed, me.address!, me.address!] }),
+      writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.vault, abi: vaultAbi, functionName: "requestDeposit", args: [parsed, me.address!, me.address!] }),
     );
     if (ok) setAmount("");
   }
@@ -102,15 +110,15 @@ export default function VaultApp() {
   async function requestRedemption() {
     if (!me.address) return;
     const ok = await run(`Request redemption of ${fmtUnits(parsed)} units`, () =>
-      writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "requestRedeem", args: [parsed, me.address!, me.address!] }),
+      writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.vault, abi: vaultAbi, functionName: "requestRedeem", args: [parsed, me.address!, me.address!] }),
     );
     if (ok) setAmount("");
   }
 
   const claimUnits = () =>
-    run("Claim units", () => writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "mint", args: [me.claimableUnits!, me.address!, me.address!] }));
+    run("Claim units", () => writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.vault, abi: vaultAbi, functionName: "mint", args: [me.claimableUnits!, me.address!, me.address!] }));
   const claimUsdc = () =>
-    run("Claim USDC", () => writeContractAsync({ address: ADDR.vault, abi: vaultAbi, functionName: "withdraw", args: [me.claimableUsdc!, me.address!, me.address!] }));
+    run("Claim USDC", () => writeContractAsync({ chainId: hyperEvmTestnet.id, address: ADDR.vault, abi: vaultAbi, functionName: "withdraw", args: [me.claimableUsdc!, me.address!, me.address!] }));
 
   const tooMuch = tab === "subscribe" ? parsed > (me.usdc ?? 0n) : parsed > (me.units ?? 0n);
   const indicativeUnits = tab === "subscribe" && fund.nav ? (parsed * 10n ** 18n) / fund.nav : undefined;
@@ -129,6 +137,14 @@ export default function VaultApp() {
     if (wrongChain) return <button className="btn block" onClick={() => switchChain({ chainId: hyperEvmTestnet.id })}>Switch to HyperEVM Testnet</button>;
     if (NOT_DEPLOYED) return <div className="notice info">The fund contracts are being deployed to HyperEVM testnet. Dealing opens shortly.</div>;
     if (fund.paused) return <div className="notice err">Dealing is paused: a circuit breaker has tripped. Only the fund manager can resume it.</div>;
+    if (noGas)
+      return (
+        <div className="notice err">
+          This wallet has no testnet HYPE on HyperEVM, so it can't pay gas for any transaction. On app.hyperliquid-testnet.xyz, buy a
+          little HYPE with test USDC (Trade → Spot, HYPE/USDC), then move it to HyperEVM with Transfer (Spot → EVM). About 0.01 HYPE is
+          enough for the whole demo.
+        </div>
+      );
     return null;
   };
 
