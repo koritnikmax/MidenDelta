@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Join the launch · MidenDelta</title>
+  <meta name="description" content="Join the MidenDelta launch list and get an email when strategy 01, the ETH cash and carry, goes live." />
+  <meta name="theme-color" content="#f3efe8" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-50 -50 100 100'%3E%3Ccircle r='44' fill='none' stroke='%23202020' stroke-width='6'/%3E%3Cpath d='M0,-44 L38.105,22 L-38.105,22 Z' fill='none' stroke='%23202020' stroke-width='7' stroke-linejoin='miter'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/site.css" />
+  <script type="importmap">{ "imports": { "lenis": "./assets/vendor/lenis.mjs" } }</script>
+</head>
+<body>
+<main id="main">
+  <section class="join-page">
+    <div class="wrap join-grid">
+      <div class="join-main">
+        <span class="eyebrow reveal"><b>01</b>Launch list</span>
+        <h1 class="reveal" data-delay="1">Be there when strategy 01 goes live.</h1>
+        <p class="reveal" data-delay="2">One email when the first module is out, then one each time a new strategy is added. No spam, unsubscribe in one click.</p>
+        <div class="join reveal" data-delay="3" data-join></div>
+      </div>
+
+      <aside class="join-card reveal" data-delay="2" aria-label="What you get">
+        <div class="join-card-top">
+          <span class="eyebrow">What you get</span>
+          <div class="join-card-mark" data-logo></div>
+        </div>
+        <ol class="sec-list">
+          <li><span class="n">01</span><h3>Theory, turned into video <span class="tag">Mostly free</span></h3><p>The math behind each strategy, without a finance degree.</p></li>
+          <li><span class="n">02</span><h3>Exchange walkthrough <span class="tag">Free with our link</span></h3><p>Account, orders, margin and funding, screen by screen.</p></li>
+          <li><span class="n">03</span><h3>Broker, coins and rebalancing</h3><p>Where to run it and how to keep it neutral.</p></li>
+          <li><span class="n">04</span><h3>Capital efficiency and automation with Claude</h3><p>Do more with less margin, and let it run itself.</p></li>
+        </ol>
+        <p class="join-card-note">No management fee. No performance fee.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+<script type="module">
+  import { initChrome } from "./assets/js/common.js";
+  import { initJoin } from "./assets/js/join.js";
+  initChrome("join");
+  initJoin();
+</script>
+</body>
+</html>
