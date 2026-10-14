@@ -1,0 +1,9 @@
+// Cloudflare Workers deploy of the static site (midendelta.com).
+// The build command in Cloudflare copies the public pages into dist/; wrangler uploads dist/ as static assets.
+{
+  "name": "midendelta",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
