@@ -6,7 +6,7 @@ export const CONFIG = {
   // Brevo subscription form for the launch list (Brevo → Contacts → Forms → your form → Share → "Copy the form's
   // action URL", looks like https://xxxx.sibforms.com/serve/MUIF...). Turn on double opt-in in that form.
   // Leave empty and the Join form shows an error instead of sending.
-  brevoFormUrl: "",
+  brevoFormUrl: "https://54065848.sibforms.com/serve/MUIFAPbRayGNJ0jRj3w9F8ItAcxgPStYpLvLbK-p1kHrqQNEbLdSjFkJeaDDyFHvfLx6TLrZM51y0RWj4acFEJPpmf8pLOtsXV8vp-7L6M2xLXbv7WXrpAVa9USz_trYXJIYvIazdf9AXq2EuBW691znJ8f6bssmk4q4vhRVEGNvTB3JR4dnr7lIX0DMMJyec73smvNj9J_BmXFCgw==",
 
   // YouTube channel for the strategy videos. Leave empty to hide the "Watch on YouTube" buttons.
   youtubeUrl: "",
