@@ -15,20 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-        working-directory: web
-      - run: npx vite build
-        working-directory: web
-      # Marketing site at the root, testnet demo app under /demo/
+      # Static site, no build step
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp -R site/index.html site/investors.html site/performance.html site/join.html site/impressum.html site/datenschutz.html site/assets _site/
-          mkdir -p _site/demo
-          cp -R web/dist/. _site/demo/
+          cp -R site/index.html site/performance.html site/join.html site/impressum.html site/datenschutz.html site/assets _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
