@@ -35,8 +35,8 @@ function header(page) {
   <header class="site-header" id="site-header">
     <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
     <div class="header-actions">
-      <a class="btn btn-ghost btn-sm header-demo" href="./#library">Strategies</a>
       <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.performanceUrl}">Backtest</a>
+      <a class="btn btn-primary btn-sm header-join" href="${page === "home" ? "#join" : "./#join"}">Join</a>
       <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Open menu"><span></span><span></span></button>
     </div>
   </header>
@@ -45,6 +45,7 @@ function header(page) {
       <a class="menu-link" href="./"${cur("home")}><small>01</small>How it works</a>
       <a class="menu-link" href="./#library"><small>02</small>Strategies</a>
       <a class="menu-link" href="${CONFIG.performanceUrl}"${cur("performance")}><small>03</small>Backtest <span class="menu-tag">Simulated</span></a>
+      <a class="menu-link" href="./#join"><small>04</small>Join the launch ${ARROW}</a>
     </nav>
     <aside>
       ${logoSvg("mark-lg", true)}

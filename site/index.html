@@ -34,7 +34,7 @@
           <p class="hero-claim">From the theory behind the edge to a live position on a real exchange.</p>
           <p>MidenDelta takes one institutional strategy at a time and shows you all of it: why it makes money, where it loses money, and exactly how to set it up yourself.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#library">See the strategies</a>
+            <a class="btn btn-primary" href="#join">Join the launch</a>
             <a class="btn btn-ghost" href="performance.html">Strategy 01 backtest</a>
           </div>
         </div>
@@ -151,16 +151,36 @@
     </div>
   </section>
 
-  <section class="section" style="padding-top:0">
+  <section class="section join-section" id="join" style="padding-top:0">
     <div class="wrap">
       <div class="cta-band reveal">
         <div>
-          <span class="eyebrow">Start here</span>
-          <h2>Start with strategy 01.</h2>
-          <p>The first module covers the cash and carry from the funding math to a running position. Watch the videos, or look at three years of simulated results first.</p>
+          <span class="eyebrow">Launch list</span>
+          <h2>Be there when strategy 01 goes live.</h2>
+          <p>Leave your email and we'll write when the first module is out. After that, only when a new strategy is added. No spam, unsubscribe in one click.</p>
+
+          <div class="join" id="join-box" data-state="form">
+            <form class="join-form" id="join-form" novalidate>
+              <label class="sr-only" for="join-email">Email address</label>
+              <div class="join-row">
+                <input id="join-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required />
+                <button class="btn btn-primary" type="submit">Join
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+              </div>
+              <p class="join-legal">By joining you agree to receive emails about the MidenDelta launch and new strategies. You can withdraw at any time. Details in our <a href="datenschutz.html">privacy policy</a>.</p>
+              <p class="join-err" id="join-err" role="alert"></p>
+            </form>
+
+            <div class="join-pending" id="join-pending" tabindex="-1" aria-live="polite">
+              <span class="join-status"><i></i>Not confirmed yet</span>
+              <h3>One more step: check your inbox.</h3>
+              <p>We've sent a confirmation link to <b class="mono" id="join-sent-to"></b>. Under EU data protection rules we can only add you once you click it.</p>
+              <p class="join-hint">Nothing after a few minutes? Look in your spam or promotions folder, or <button type="button" class="link-btn" id="join-again">use a different address</button>.</p>
+            </div>
+          </div>
+
           <div class="actions">
-            <a class="btn btn-primary" data-youtube href="#" hidden>Watch on YouTube
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="btn btn-ghost" data-youtube href="#" hidden>Watch on YouTube</a>
             <a class="btn btn-ghost" href="performance.html">See the backtest</a>
           </div>
         </div>

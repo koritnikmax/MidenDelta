@@ -1,8 +1,10 @@
 import { initChrome, reducedMotion, scrollToY } from "./common.js";
 import { CONFIG } from "./config.js";
 import { SERIES } from "./chartdata.js";
+import { initJoin } from "./join.js";
 
 initChrome("home");
+initJoin();
 document.querySelectorAll("[data-youtube]").forEach((a) => {
   if (!CONFIG.youtubeUrl) return;
   a.href = CONFIG.youtubeUrl;

@@ -3,6 +3,11 @@ export const CONFIG = {
   // Where the testnet demo (the /web app) is served. The GitHub Pages workflow publishes it under /demo/.
   demoUrl: "demo/",
 
+  // Brevo subscription form for the launch list (Brevo → Contacts → Forms → your form → Share → "Copy the form's
+  // action URL", looks like https://xxxx.sibforms.com/serve/MUIF...). Turn on double opt-in in that form.
+  // Leave empty and the Join form shows an error instead of sending.
+  brevoFormUrl: "",
+
   // YouTube channel for the strategy videos. Leave empty to hide the "Watch on YouTube" buttons.
   youtubeUrl: "",
 
