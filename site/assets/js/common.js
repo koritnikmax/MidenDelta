@@ -35,22 +35,20 @@ function header(page) {
   <header class="site-header" id="site-header">
     <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
     <div class="header-actions">
-      <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.performanceUrl}">Performance</a>
-      <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.demoUrl}">Launch demo</a>
+      <a class="btn btn-ghost btn-sm header-demo" href="./#library">Strategies</a>
+      <a class="btn btn-ghost btn-sm header-demo" href="${CONFIG.performanceUrl}">Backtest</a>
       <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Open menu"><span></span><span></span></button>
     </div>
   </header>
   <div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Site menu">
     <nav>
       <a class="menu-link" href="./"${cur("home")}><small>01</small>How it works</a>
-      <a class="menu-link" href="${CONFIG.demoUrl}"><small>02</small>Demo <span class="menu-tag">Testnet</span></a>
-      <a class="menu-link" href="${CONFIG.performanceUrl}"><small>03</small>Performance <span class="menu-tag">Simulated</span></a>
-      <a class="menu-link" href="investors.html"${cur("investors")}><small>04</small>Investors ${ARROW}</a>
-      <a class="menu-link" href="team.html"${cur("team")}><small>05</small>Team</a>
+      <a class="menu-link" href="./#library"><small>02</small>Strategies</a>
+      <a class="menu-link" href="${CONFIG.performanceUrl}"${cur("performance")}><small>03</small>Backtest <span class="menu-tag">Simulated</span></a>
     </nav>
     <aside>
       ${logoSvg("mark-lg", true)}
-      <p>MidenDelta is building institutional strategies as a fund with on-chain units. Vault 01, a delta-neutral ETH cash and carry for professional investors, is in preparation.</p>
+      <p>MidenDelta explains the strategies institutional desks run, from the theory to a working position. Strategy 01 is the ETH cash and carry.</p>
     </aside>
   </div>`;
 }
@@ -62,21 +60,17 @@ function footer() {
     <div class="footer-grid">
       <div>
         <a class="brand" href="./" aria-label="MidenDelta home">${logoSvg()}<span class="brand-name">Miden<b>Delta</b></span></a>
-        <p style="margin-top:14px;max-width:38ch">The next-gen hedge fund: built for regulated funds, with on-chain units and on-chain execution.</p>
+        <p style="margin-top:14px;max-width:38ch">Hedge fund strategies, from the theory to the exact setup.</p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><a href="./">How it works</a></li>
-        <li><a href="${CONFIG.demoUrl}">Testnet demo</a></li>
-        <li><a href="${CONFIG.performanceUrl}">Performance (simulated)</a></li>
-        <li><a href="team.html">Team</a></li>
+        <li><a href="./#library">Strategies</a></li>
+        <li><a href="${CONFIG.performanceUrl}">Backtest (simulated)</a></li>
       </ul></div>
-      <div><h4>Invest</h4><ul>
-        <li><a href="investors.html#vault">${CONFIG.fundMarketing ? "Vault 01 waitlist" : "Vault 01 interest list"}</a></li>
-        <li><a href="investors.html#seed">Seed round</a></li>
-      </ul></div>
+      ${CONFIG.youtubeUrl ? `<div><h4>Watch</h4><ul><li><a href="${CONFIG.youtubeUrl}">YouTube</a></li></ul></div>` : ""}
     </div>
     <p class="legal-links"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><span>No cookies, no tracking.</span></p>
-    <p class="disclaimer">© ${y} MidenDelta. MidenDelta Fund is an alternative investment fund in formation in Liechtenstein, to be managed by a licensed AIFM. Fund units are available only to professional and semi-professional investors, and not to US persons. Nothing on this website is an offer to sell, or a solicitation of an offer to buy, fund units; any offering will be made only under the fund's offering documents. Vault 01 currently runs as a testnet prototype on HyperEVM and its smart contracts have not yet been audited. The strategy involves risk, including loss of capital: returns vary and can be negative, and a delta-neutral position remains exposed to funding-rate, basis, execution, venue and smart-contract risk. Past or simulated performance is not a reliable indicator of future results.</p>
+    <p class="disclaimer">© ${y} MidenDelta. MidenDelta is financial education. Nothing on this website or in our videos is investment advice, a recommendation to buy or sell anything, or an offer of a financial product; decide for yourself and, if in doubt, ask a licensed adviser. Some links to exchanges are affiliate links: if you sign up through them, we may receive a commission at no extra cost to you. Trading derivatives with leverage carries a high risk of losing money. A delta-neutral position is still exposed to funding-rate, basis, execution, liquidation, exchange and smart-contract risk, and funding can turn negative. Figures shown are simulated from historical data and are not a track record; past or simulated performance is not a reliable indicator of future results.</p>
   </footer>`;
 }
 

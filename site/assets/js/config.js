@@ -3,6 +3,9 @@ export const CONFIG = {
   // Where the testnet demo (the /web app) is served. The GitHub Pages workflow publishes it under /demo/.
   demoUrl: "demo/",
 
+  // YouTube channel for the strategy videos. Leave empty to hide the "Watch on YouTube" buttons.
+  youtubeUrl: "",
+
   // Public strategy research: a simulated backtest of a generic ETH cash and carry, not fund performance.
   performanceUrl: "performance.html",
 

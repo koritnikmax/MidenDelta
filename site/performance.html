@@ -1,58 +1,55 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Strategy research: what a delta-neutral ETH cash and carry on Hyperliquid would have earned from funding, May 2023 to September 2026. Simulated, not fund performance.">
+<meta name="description" content="Strategy research: what a delta-neutral ETH cash and carry on Hyperliquid would have earned from funding, May 2023 to September 2026. Simulated, not a track record.">
+<meta name="theme-color" content="#f3efe8">
 <title>ETH carry research | MidenDelta</title>
 <link rel="stylesheet" href="assets/css/fonts.css">
+<link rel="stylesheet" href="assets/css/site.css">
+<script type="importmap">{ "imports": { "three": "./assets/vendor/three.module.min.js", "lenis": "./assets/vendor/lenis.mjs" } }</script>
 <style>
 :root{
-  --paper:#F3F5F8; --surface:#FFFFFF; --ink:#0C1626; --ink2:#4B5870; --ink3:#7A869B;
-  --rule:#DCE1EA; --accent:#2B44E0; --accent-soft:rgba(43,68,224,.10); --neg:#C4432F; --neg-soft:rgba(196,67,47,.14);
-  --grid:rgba(12,22,38,.07);
+  --paper:#f3efe8; --surface:#fffdf9; --ink:#1a1714; --ink2:#5c564e; --ink3:#847c71;
+  --rule:rgba(26,23,20,.1); --accent:#1a1714; --accent-soft:rgba(26,23,20,.07); --neg:#b9b0a3; --neg-soft:rgba(185,176,163,.25);
+  --grid:rgba(26,23,20,.07);
   --display:"Geist",system-ui,sans-serif;
   --body:"Geist",system-ui,-apple-system,sans-serif;
   --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  color-scheme:dark;--paper:#000000;--surface:#0e0e0e;--ink:#F2F2F2;--ink2:#A8A8A8;--ink3:#7A7A7A;
-  --rule:#262626;--accent:#F2F2F2;--accent-soft:rgba(255,255,255,.08);--neg:#6E6E6E;--neg-soft:rgba(255,255,255,.1);--grid:rgba(255,255,255,.07);}}
-:root[data-theme="dark"]{
-  color-scheme:dark;--paper:#000000;--surface:#0e0e0e;--ink:#F2F2F2;--ink2:#A8A8A8;--ink3:#7A7A7A;
-  --rule:#262626;--accent:#F2F2F2;--accent-soft:rgba(255,255,255,.08);--neg:#6E6E6E;--neg-soft:rgba(255,255,255,.1);--grid:rgba(255,255,255,.07);}
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;padding-inline:clamp(16px,4vw,48px);padding-block:0 64px;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1120px;margin:0 auto}
-a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink3);text-underline-offset:3px}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.research{padding:clamp(110px,14vw,150px) var(--gutter) 40px}
+.research .wrap{max-width:1120px;margin:0 auto}
+.research a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink3);text-underline-offset:3px}
 a:hover{text-decoration:underline}
 a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 .num{font-variant-numeric:tabular-nums}
 
-/* masthead */
-.mast{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .mark{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:500;font-size:17px;letter-spacing:.01em}
 .mark svg{flex:none}
-.meta{font-family:var(--mono);font-size:12px;color:var(--ink2);display:flex;gap:18px;flex-wrap:wrap}
+.meta{font-family:var(--mono);font-size:12px;color:var(--ink2);display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
+.meta span{border:1px solid var(--rule);border-radius:999px;padding:4px 12px;background:var(--surface)}
 .meta b{color:var(--ink);font-weight:500}
 
-.lede{display:block;padding-block:44px 36px;align-items:end}
+.lede{display:block;padding-block:0 36px}
 @media (max-width:860px){.lede{grid-template-columns:1fr;gap:24px;padding-block:32px 24px}}
 .eyebrow{font-size:14px;color:var(--ink3);margin:0}
-h1{font-family:var(--display);font-weight:500;font-size:clamp(34px,5.2vw,58px);line-height:1.02;letter-spacing:-.02em;margin:10px 0 16px;text-wrap:balance}
-.lede p{margin:0;color:var(--ink2);font-size:16.5px;max-width:58ch}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(40px,6vw,84px);line-height:.98;letter-spacing:-.045em;margin:16px 0 22px;text-wrap:balance;max-width:16ch}
+.lede p{margin:0;color:var(--ink2);font-size:18px;max-width:60ch}
 
 /* method */
-section{padding-block:28px}
+.research section{padding-block:28px}
 .sh{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-h2{font-family:var(--display);font-weight:500;font-size:22px;letter-spacing:-.005em;margin:0}
+.research h2{font-family:var(--display);font-weight:500;font-size:26px;letter-spacing:-.025em;margin:0}
 .sh .note{font-size:13px;color:var(--ink3)}
-.method{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:28px}
+.method{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;background:var(--surface);border:1px solid var(--rule);border-radius:22px;padding:32px;box-shadow:0 40px 80px -50px rgba(60,45,25,.25)}
 @media (max-width:860px){.method{grid-template-columns:1fr;gap:24px;padding:20px}}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:s}
-.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;counter-increment:s}
-.steps li::before{content:counter(s);font-family:var(--mono);font-size:12px;color:var(--ink);border:1px solid var(--rule);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;margin-top:1px}
-.steps b{font-weight:600}
-.steps span{color:var(--ink2)}
+.msteps{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:s}
+.msteps li{display:grid;grid-template-columns:28px 1fr;gap:10px;counter-increment:s}
+.msteps li::before{content:counter(s);font-family:var(--mono);font-size:12px;color:var(--ink);border:1px solid var(--rule);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;margin-top:1px}
+.msteps b{font-weight:600}
+.msteps span{color:var(--ink2)}
 dl.spec{margin:0;display:grid;grid-template-columns:auto 1fr;gap:9px 20px;font-size:13.5px;align-content:start}
 dl.spec dt{font-size:13px;color:var(--ink3)}
 dl.spec dd{margin:0}
@@ -67,11 +64,11 @@ code{overflow-wrap:anywhere;font-family:var(--mono);font-size:12.5px;background:
 .fig+.fig{padding-left:20px}
 .fig:nth-child(3n+1){padding-left:0}
 @media (max-width:860px){.fig{padding:16px 12px 16px 0!important}.fig:nth-child(2n){border-right:0;padding-left:12px!important}.fig:nth-child(n+3){border-top:1px solid var(--rule)}}
-.fig .v{font-family:var(--display);font-weight:500;font-size:clamp(28px,3.4vw,38px);letter-spacing:-.02em;line-height:1.05}
+.fig .v{font-family:var(--mono);font-weight:400;font-size:clamp(26px,3.2vw,36px);letter-spacing:-.03em;line-height:1.05}
 .fig .k{font-size:13px;color:var(--ink2);margin-top:6px}
 
 /* charts */
-.panel{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:22px 22px 16px}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:22px;padding:26px 26px 18px;box-shadow:0 40px 80px -50px rgba(60,45,25,.25)}
 @media (max-width:640px){.panel{padding:16px 12px 10px}}
 .panel h3{font-family:var(--body);font-weight:500;font-size:15px;margin:0}
 .panel .cap{font-size:13px;color:var(--ink2);margin:3px 0 14px}
@@ -100,38 +97,32 @@ details .tw{max-height:320px;overflow:auto;margin-top:10px}
 .caveat h2{font-size:18px}
 .caveat ul{margin:0;padding-left:18px;color:var(--ink2);display:grid;gap:6px}
 
-.notice{margin:8px 0 40px;padding:16px 18px;border:1px solid var(--rule);border-left:3px solid var(--ink);border-radius:8px;background:var(--surface);color:var(--ink2);font-size:14.5px;line-height:1.6}
+.notice{margin:8px 0 40px;padding:18px 20px;border:1px solid var(--rule);border-left:3px solid var(--ink);border-radius:12px;background:var(--surface);color:var(--ink2);font-size:14.5px;line-height:1.6}
 .notice b{display:block;color:var(--ink);margin-bottom:4px}
-footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
+<main id="main" class="research">
 <div class="wrap">
-  <header class="mast">
-    <a class="mark" href="./" style="color:inherit;text-decoration:none" title="Back to the MidenDelta homepage">
-      <svg width="26" height="26" viewBox="-50 -50 100 100" fill="none" stroke="var(--accent)" aria-hidden="true"><circle r="44" stroke-width="1.2" vector-effect="non-scaling-stroke"/><path d="M0,-44 L38.105,22 L-38.105,22 Z" stroke-width="1.7" vector-effect="non-scaling-stroke"/><path d="M0,-33 L28.579,16.5 L-28.579,16.5 Z" stroke-width=".75" opacity=".55" vector-effect="non-scaling-stroke"/><circle cy="-44" r="3.2" fill="var(--accent)" stroke="none"/><circle cx="38.105" cy="22" r="3.2" fill="var(--accent)" stroke="none"/><circle cx="-38.105" cy="22" r="3.2" fill="var(--accent)" stroke="none"/></svg>
-      MidenDelta
-    </a>
-    <div class="meta"><span>Data to <b>11 Sep 2026</b></span><span>Instrument <b>ETH-PERP on Hyperliquid</b></span><span>Window <b>1,219 days</b></span></div>
-  </header>
 
   <div class="lede">
     <div>
-      <p class="eyebrow">Strategy research · simulated</p>
+      <span class="eyebrow"><b>01</b>Strategy 01 backtest · simulated</span>
       <h1>Three years of ETH funding, earned from the short side</h1>
       <p>Long spot ETH, short an equal amount of ETH perpetuals on Hyperliquid, and collect the funding that longs pay shorts every hour. This page shows what that generic position would have earned from May 2023 to September 2026, computed from Hyperliquid's public funding history.</p>
+      <div class="meta"><span>Data to <b>11 Sep 2026</b></span><span>Instrument <b>ETH-PERP on Hyperliquid</b></span><span>Window <b>1,219 days</b></span></div>
     </div>
   </div>
 
   <aside class="notice" role="note">
-    <b>This is strategy research, not fund performance.</b>
-    All figures are simulated from historical market data for a generic ETH cash and carry position. They are not the track record of any MidenDelta product. MidenDelta Fund is in preparation and not yet authorised; nothing on this page is an offer, a solicitation or investment advice. Past funding rates are not a reliable indicator of future results, and the strategy can lose money.
+    <b>This is a simulation, not a track record.</b>
+    All figures are simulated from historical market data for a generic ETH cash and carry position. They are not the results of real trades. Nothing on this page is investment advice. Past funding rates are not a reliable indicator of future results, and the strategy can lose money.
   </aside>
 
   <section id="method" aria-labelledby="h-method">
     <div class="sh"><h2 id="h-method">How the data was collected</h2></div>
     <div class="method">
-      <ol class="steps">
+      <ol class="msteps">
         <li><div><b>Pulled every ETH funding payment</b> <span>from the <a href="https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals" rel="noopener">Hyperliquid public API</a>, back to the first ETH record on 12 May 2023.</span></div></li>
         <li><div><b>Aggregated 28,668 payments into 1,219 daily rates.</b> <span>Hyperliquid paid funding every 8 hours in the first weeks of data (until 7 June 2023) and every hour since 8 June 2023.</span></div></li>
         <li><div><b>Took the short's view.</b> <span>A positive rate means longs pay shorts, so it is income for this position. Negative days count as losses.</span></div></li>
@@ -205,8 +196,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-si
     </ul>
   </section>
 
-  <footer><span>MidenDelta research note: ETH cash and carry, simulated</span><span>Simulated backtest, not fund performance. Not an offer, solicitation or investment advice.</span><span><a href="impressum.html" style="color:inherit">Impressum</a> · <a href="datenschutz.html" style="color:inherit">Datenschutz</a></span></footer>
 </div>
+</main>
 
 <script src="assets/vendor/chart.umd.js"></script>
 <script>
@@ -270,3 +261,4 @@ start();
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", start);
 new MutationObserver(start).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 </script>
+<script type="module">import { initChrome } from "./assets/js/common.js"; initChrome("performance");</script>
